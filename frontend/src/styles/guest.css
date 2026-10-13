@@ -89,6 +89,18 @@
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
+.g-service-pill {
+  background: color-mix(in srgb, #f59e0b 22%, rgba(13, 17, 26, 0.75));
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.g-service-pill:hover {
+  background: color-mix(in srgb, #f59e0b 35%, rgba(13, 17, 26, 0.9));
+  border-color: #f59e0b;
+  color: #fef3c7;
+}
+
 .g-hero-in {
   width: min(720px, 100%);
   margin: 0 auto;
@@ -328,6 +340,86 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
+/* ---------- Gamified Interactive Discovery Banner ---------- */
+.g-discovery-banner {
+  width: min(720px, 100%);
+  margin: 12px auto 0;
+  padding: 0 16px;
+}
+
+.g-discovery-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(26, 35, 52, 0.85) 0%, rgba(13, 18, 28, 0.95) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.g-discovery-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 0 12px 28px rgba(245, 158, 11, 0.15), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.g-discovery-card:active {
+  transform: translateY(0);
+}
+
+.g-discovery-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #1e1305;
+  display: grid;
+  place-items: center;
+  flex: none;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+}
+
+.g-discovery-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.g-discovery-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.g-discovery-text span {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.g-discovery-btn {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.g-discovery-card:hover .g-discovery-btn {
+  background: #f59e0b;
+  color: #1e1305;
+}
+
 /* ---------- Main Dish Stream ---------- */
 .g-main {
   width: min(720px, 100%);
@@ -367,7 +459,21 @@
 }
 
 .g-featured-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   margin-bottom: 12px;
+}
+
+.g-featured-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flame-icon {
+  color: #f97316;
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.6));
 }
 
 .g-featured-head h2 {
@@ -537,6 +643,34 @@
   color: #fcd34d;
   font-size: 10.5px;
   font-weight: 800;
+  flex: none;
+}
+
+.badge-signature {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: rgba(245, 158, 11, 0.92);
+  color: #1a1003;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4);
+}
+
+.badge-hot-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(249, 115, 22, 0.16);
+  border: 1px solid rgba(249, 115, 22, 0.35);
+  color: #fb923c;
+  font-size: 10.5px;
+  font-weight: 700;
   flex: none;
 }
 
@@ -715,7 +849,8 @@
   object-fit: cover;
 }
 
-/* ---------- Sticky Floating Order Bar ---------- */
+/* ---------- Sticky Floating Dual Bottom Bar ---------- */
+.floating-bottom-bar,
 .floating-order-bar {
   position: fixed;
   left: 0;
@@ -726,14 +861,73 @@
   pointer-events: none;
 }
 
-.floating-order-in {
+.floating-bottom-inner {
   pointer-events: auto;
-  max-width: 580px;
+  max-width: 620px;
   margin: 0 auto;
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.floating-service-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 99px;
+  background: #171f2e;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  flex: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+  transition: all 0.15s;
+}
+
+.floating-service-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+}
+
+.floating-empty-hint {
+  flex: 1;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 99px;
+  background: rgba(19, 25, 38, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  transition: all 0.15s;
+}
+
+.floating-empty-hint:hover {
+  background: #1c2538;
+  color: #f1f5f9;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.floating-order-in {
+  flex: 1;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 6px 14px;
+  height: 48px;
   background: #171e2c;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 99px;
@@ -854,6 +1048,62 @@
   background: radial-gradient(circle at 50% 30%, #1a2233 0%, #0d121c 85%);
 }
 
+/* ---------- 3D Plating Surface Switcher ---------- */
+.sheet-plating-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(13, 18, 28, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.plating-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.plating-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.plating-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #141b29;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.plating-pill:hover {
+  background: #1e283d;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.plating-pill.on {
+  background: #25334e;
+  color: #38bdf8;
+  border-color: #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+  font-weight: 700;
+}
+
 .sheet-body {
   padding: 18px 20px 28px;
   display: grid;
@@ -894,12 +1144,105 @@
   margin: 0;
 }
 
+.sheet-order-row {
+  margin-top: 4px;
+}
+
 .btn-sheet-order {
   width: 100%;
   height: 48px;
   border-radius: 14px;
   font-size: 15px;
   font-weight: 700;
+}
+
+/* ---------- Sommelier & Chef Pairing Cross-Sell ---------- */
+.sheet-pairing-card {
+  background: linear-gradient(135deg, rgba(23, 30, 46, 0.9) 0%, rgba(14, 19, 31, 0.95) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.pairing-card-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fbbf24;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pairing-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pairing-card-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: none;
+  background: #0b0f17;
+}
+
+.pairing-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pairing-card-info {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pairing-card-info strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pairing-card-info span {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.btn-add-pairing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 99px;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  color: #fbbf24;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: none;
+}
+
+.btn-add-pairing:hover {
+  background: #f59e0b;
+  color: #1e1305;
+  border-color: #f59e0b;
 }
 
 .sheet-ar-wrap {
@@ -1055,6 +1398,76 @@
   background: rgba(239, 68, 68, 0.15);
 }
 
+/* ---------- Smart Bill Splitter Widget ---------- */
+.bill-splitter-box {
+  background: #141b29;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.splitter-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.splitter-options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.split-chip {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 99px;
+  background: #1c2538;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.split-chip:hover {
+  background: #25334d;
+  color: #f8fafc;
+}
+
+.split-chip.on {
+  background: #0284c7;
+  color: #fff;
+  border-color: #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.splitter-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #94a3b8;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+.splitter-result strong {
+  font-size: 15px;
+  color: #38bdf8;
+  font-weight: 800;
+}
+
 .order-notes-wrap {
   display: grid;
   gap: 6px;
@@ -1176,6 +1589,17 @@
   font-size: 14px;
 }
 
+.receipt-split {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #0284c7;
+  background: #f0f9ff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
 .receipt-note {
   font-size: 12.5px;
   background: #f1f5f9;
@@ -1196,6 +1620,305 @@
 .receipt-actions {
   display: flex;
   justify-content: center;
+}
+
+/* ---------- Chef's 3D Mystery Dish Roulette Modal ---------- */
+.roulette-dialog {
+  max-width: 440px;
+}
+
+.roulette-modal-content {
+  background: #0f1422;
+  color: #f1f5f9;
+  padding: 24px 20px;
+  display: grid;
+  gap: 16px;
+  border-radius: 20px;
+}
+
+.roulette-head {
+  text-align: center;
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.roulette-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.15));
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+}
+
+.roulette-head h3 {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+  color: #f8fafc;
+}
+
+.roulette-head p {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 34ch;
+}
+
+.roulette-card {
+  background: #161e2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  align-items: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.roulette-card.is-spinning {
+  transform: scale(0.97);
+  filter: blur(0.4px);
+  border-color: #f59e0b;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
+}
+
+.roulette-card.has-landed {
+  border-color: rgba(245, 158, 11, 0.65);
+  box-shadow: 0 0 32px rgba(245, 158, 11, 0.25), 0 8px 24px rgba(0, 0, 0, 0.5);
+  animation: landedPulse 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes landedPulse {
+  0% { transform: scale(0.95); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+.roulette-dish-img {
+  width: 84px;
+  height: 84px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex: none;
+  position: relative;
+  background: #0b0f17;
+}
+
+.roulette-dish-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.roulette-dish-details {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.roulette-cat {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.roulette-dish-details strong {
+  font-size: 15px;
+  color: #f8fafc;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roulette-dish-details b {
+  font-size: 14px;
+  color: #e2e8f0;
+  font-weight: 800;
+}
+
+.roulette-dish-details p {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.roulette-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.btn-spin-now {
+  width: 100%;
+  height: 46px;
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: 12px;
+}
+
+.roulette-landed-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.roulette-landed-actions .wide {
+  width: 100%;
+  height: 46px;
+  border-radius: 12px;
+}
+
+/* ---------- Instant Table Service Requests Modal ---------- */
+.service-dialog {
+  max-width: 480px;
+}
+
+.service-modal-content {
+  background: #0f1422;
+  color: #f1f5f9;
+  padding: 22px 20px 28px;
+  display: grid;
+  gap: 16px;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+}
+
+.service-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.service-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.service-head h3 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+  color: #f8fafc;
+}
+
+.service-head p {
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin: 2px 0 0;
+}
+
+.service-head .sheet-close-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.service-table-input {
+  display: grid;
+  gap: 6px;
+}
+
+.service-table-input label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.service-table-input input {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #151b2a;
+  color: #fff;
+  padding: 0 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.service-table-input input:focus {
+  border-color: #f59e0b;
+}
+
+.service-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .service-options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.service-option-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #161e2e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.service-option-card:hover {
+  background: #1f2a3f;
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.service-option-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #222d42;
+  color: #38bdf8;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.service-option-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.service-option-text strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.25;
+}
+
+.service-option-text span {
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.2;
 }
 
 /* ---------- Wi-Fi & Share Modals ---------- */
@@ -1332,6 +2055,14 @@
   color: #fff;
 }
 
+.wifi-modal-foot,
+.share-modal-foot {
+  margin-top: 6px;
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .g-foot {
   padding: 16px 16px 48px;
   text-align: center;
@@ -1353,27 +2084,29 @@
 }
 
 /* ==========================================================================
-   Restaurant Owner Dashboard: Interactive iPhone Mockup Preview
+   Restaurant Owner Dashboard: Clean Responsive Menu Preview
    ========================================================================== */
 .preview-container {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  background: #080b11;
-  color: #f1f5f9;
+  background: var(--porcelain);
+  color: var(--ink);
 }
 
 .preview-topbar {
   position: sticky;
   top: 0;
   z-index: 40;
-  height: 54px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background: #0f1420;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 20, 32, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
 }
 
 .preview-topbar-left {
@@ -1388,44 +2121,19 @@
   font-weight: 600;
 }
 
-.preview-topbar-center {
-  display: flex;
-  align-items: center;
-}
-
-.device-switcher {
-  display: inline-flex;
-  background: #182030;
-  padding: 3px;
-  border-radius: 99px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.dev-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 99px;
-  border: 0;
-  background: transparent;
-  color: #94a3b8;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.dev-btn.on {
-  background: #253148;
-  color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-}
-
 .preview-topbar-right {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.preview-hint-pill {
+  font-size: 12px;
+  color: var(--slate);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
 }
 
 .preview-link-btn {
@@ -1439,92 +2147,15 @@
   padding: 4px 10px;
   border-radius: 8px;
   background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  transition: background 0.15s;
 }
 
 .preview-link-btn:hover {
   background: rgba(56, 189, 248, 0.2);
 }
 
-/* Smartphone Mockup Frame */
-.preview-device-stage {
+.preview-content {
   flex: 1;
-  display: grid;
-  place-items: center;
-  padding: 32px 16px 48px;
-  background: radial-gradient(circle at 50% 30%, #151b2a 0%, #080b11 80%);
-}
-
-.iphone-frame {
-  position: relative;
-  width: 390px;
-  max-width: 100%;
-  height: 820px;
-  max-height: calc(100dvh - 120px);
-  background: #000;
-  border-radius: 52px;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 4px #2b3240, 0 0 0 7px #161a22;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.iphone-notch {
-  position: absolute;
-  top: 11px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 120px;
-  height: 28px;
-  background: #000;
-  border-radius: 20px;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 14px;
-}
-
-.iphone-speaker {
-  display: none;
-}
-
-.iphone-camera {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #111a2e;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.iphone-screen {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background: #090c13;
-  scrollbar-width: none;
-}
-.iphone-screen::-webkit-scrollbar {
-  display: none;
-}
-
-.iphone-home-bar {
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 134px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 99px;
-  z-index: 50;
-  pointer-events: none;
-}
-
-.preview-full-wrapper {
-  flex: 1;
-}
-
-.guest.is-framed {
-  padding-top: 36px;
-  padding-bottom: 24px;
+  width: 100%;
 }

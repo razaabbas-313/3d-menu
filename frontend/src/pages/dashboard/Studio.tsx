@@ -1,5 +1,12 @@
 import { DragEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Check, Smartphone, Trash2, Upload } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  Smartphone,
+  Trash2,
+  Upload
+} from 'lucide-react';
 import { api, assetUrl, Item, publicMenuUrl } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { money } from '../../lib/format';
@@ -13,6 +20,8 @@ import { useMenu } from './menuStore';
 
 const MAX_BYTES = 25 * 1024 * 1024;
 
+type FilterType = 'all' | '3d' | 'photo';
+
 export function Studio() {
   const { restaurant } = useAuth();
   const menu = useMenu();
@@ -20,11 +29,14 @@ export function Studio() {
   const { search } = useLocation();
   const [selectedId, setSelectedId] = useState<string>(search.get('dish') ?? '');
   const [q, setQ] = useState('');
+  const [filterType, setFilterType] = useState<FilterType>('all');
   const [drag, setDrag] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removing, setRemoving] = useState(false);
-  const [savingTuning, setSavingTuning] = useState(false);
+  const [savingScale, setSavingScale] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const input = useRef<HTMLInputElement>(null);
   const viewer = useRef<ModelViewerHandle>(null);
 
@@ -32,75 +44,89 @@ export function Studio() {
   const dish: Item | undefined = items.find((i) => i.id === selectedId) ?? items[0];
 
   const [currentScale, setCurrentScale] = useState<number>(dish?.modelScale ?? 1.0);
-  const [currentPlacement, setCurrentPlacement] = useState<string>(dish?.modelPlacement ?? 'plate');
 
   useEffect(() => {
     if (dish) {
       setCurrentScale(dish.modelScale ?? 1.0);
-      setCurrentPlacement(dish.modelPlacement ?? 'plate');
     }
-  }, [dish?.id, dish?.modelScale, dish?.modelPlacement]);
+  }, [dish?.id, dish?.modelScale]);
 
-  const isTuningDirty = Boolean(
-    dish &&
-      (Math.abs((dish.modelScale ?? 1.0) - currentScale) > 0.02 ||
-        (dish.modelPlacement ?? 'plate') !== currentPlacement)
+  const isScaleDirty = Boolean(
+    dish && Math.abs((dish.modelScale ?? 1.0) - currentScale) > 0.02
   );
 
-  async function saveTuning() {
+  async function saveScale() {
     if (!dish) return;
-    setSavingTuning(true);
+    setSavingScale(true);
     try {
-      const updated = await api.tuneModel(dish.id, currentScale, currentPlacement);
+      const updated = await api.tuneModel(dish.id, currentScale, dish.modelPlacement ?? 'none');
       menu.upsert(updated);
-      toast.success('3D plating & scale saved.');
+      toast.success('3D model scale saved.');
     } catch (e) {
-      toast.error(errorMessage(e, 'Could not save 3D settings.'));
+      toast.error(errorMessage(e, 'Could not save scale.'));
     } finally {
-      setSavingTuning(false);
+      setSavingScale(false);
     }
   }
 
-  // Keep the URL in sync so the page can be bookmarked or linked from the menu list.
+  // Keep URL in sync
   useEffect(() => {
-    if (dish && dish.id !== search.get('dish')) navigate(`/app/studio?dish=${dish.id}`, { replace: true });
+    if (dish && dish.id !== search.get('dish')) {
+      navigate(`/app/studio?dish=${dish.id}`, { replace: true });
+    }
   }, [dish, search]);
 
-  const filtered = useMemo(
-    () => items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase())),
-    [items, q]
-  );
+  const filtered = useMemo(() => {
+    return items.filter((i) => {
+      const matchSearch =
+        i.name.toLowerCase().includes(q.toLowerCase()) ||
+        i.category.toLowerCase().includes(q.toLowerCase());
+      if (!matchSearch) return false;
+      if (filterType === '3d') return Boolean(i.modelUrl);
+      if (filterType === 'photo') return !i.modelUrl;
+      return true;
+    });
+  }, [items, q, filterType]);
+
+  const count3D = useMemo(() => items.filter((i) => i.modelUrl).length, [items]);
+  const countPhoto = items.length - count3D;
 
   if (!restaurant) return null;
-  if (menu.status === 'loading') return <Spinner label="Loading your dishes" />;
+  if (menu.status === 'loading') return <Spinner label="Loading 3D studio…" />;
 
   if (items.length === 0) {
     return (
       <>
-        <PageHeader title="3D studio" subtitle="Attach 3D models to your dishes." />
+        <PageHeader title="3D Studio" subtitle="Attach 3D models to your dishes." />
         <section className="panel">
-          <EmptyState title="Add a dish first" text="3D models are attached to dishes on your menu."
-            action={<ButtonLink to="/app/menu?new=1" variant="primary">Add a dish</ButtonLink>} />
+          <EmptyState
+            title="Add a dish first"
+            text="3D models are attached to dishes on your menu."
+            action={<ButtonLink to="/app/menu?new=1" variant="primary">Add a dish</ButtonLink>}
+          />
         </section>
       </>
     );
   }
+
   if (!dish) return null;
 
   async function upload(file: File | undefined) {
     if (!file || !dish) return;
     if (!/\.glb$/i.test(file.name)) {
-      toast.error('Please choose a .glb file. In Blender, Sketchfab or Polycam, export as "glTF Binary (.glb)".');
+      toast.error('Please choose a .glb file. Export as glTF Binary (.glb) from Polycam, Blender, or Sketchfab.');
       return;
     }
     if (file.size > MAX_BYTES) {
-      toast.error(`That file is ${(file.size / 1048576).toFixed(1)} MB. The limit is 25 MB. Reduce texture sizes and export again.`);
+      toast.error(
+        `That file is ${(file.size / 1048576).toFixed(1)} MB. The limit is 25 MB. Optimize textures and try again.`
+      );
       return;
     }
     setProgress(0);
     try {
       menu.upsert(await api.uploadModel(dish.id, file, setProgress));
-      toast.success(`3D model attached to ${dish.name}.`);
+      toast.success(`3D model attached to ${dish.name}!`);
     } catch (e) {
       toast.error(errorMessage(e, 'Upload failed.'));
     } finally {
@@ -123,8 +149,11 @@ export function Studio() {
   }
 
   function testAr() {
-    if (viewer.current?.canActivateAR) viewer.current.activateAR();
-    else toast.info('AR opens on a phone or tablet. Scan the QR code below with your phone to try it.');
+    if (viewer.current?.canActivateAR) {
+      viewer.current.activateAR();
+    } else {
+      toast.info('Scan the QR code with your phone or tablet camera to test AR on your dining table.');
+    }
   }
 
   const onDrop = (e: DragEvent) => {
@@ -132,48 +161,190 @@ export function Studio() {
     setDrag(false);
     void upload(e.dataTransfer.files[0]);
   };
+
   const phoneLink = `${publicMenuUrl(restaurant.slug)}?dish=${dish.id}`;
   const uploading = progress !== null;
 
+  const copyPhoneLink = () => {
+    void navigator.clipboard.writeText(phoneLink);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2200);
+    toast.success('AR test link copied!');
+  };
+
   return (
     <>
-      <PageHeader title="3D studio" subtitle="Upload a model, check how it looks, and test it in AR." />
-      <div className="studio">
-        <section className="panel studio-list" aria-label="Dishes">
-          <div className="panel-head tight">
-            <h2>Dishes</h2>
-            <span className="muted">{items.filter((i) => i.modelUrl).length} with 3D</span>
+      <PageHeader
+        title="3D Studio"
+        subtitle="Manage 3D dish models, adjust life-size scale, and test in augmented reality."
+        actions={
+          <div className="studio-top-actions">
+            {dish.modelUrl && (
+              <Button
+                variant="accent"
+                size="sm"
+                icon={<Smartphone size={15} />}
+                onClick={testAr}
+              >
+                Launch AR
+              </Button>
+            )}
+            <a
+              href={phoneLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary btn-sm"
+              title="Preview dish in guest menu"
+            >
+              <ExternalLink size={14} />
+              <span>Preview Menu</span>
+            </a>
           </div>
-          {items.length > 7 && <input className="input" type="search" placeholder="Search dishes" aria-label="Search dishes" value={q} onChange={(e) => setQ(e.target.value)} />}
-          <ul>
-            {filtered.map((i) => (
-              <li key={i.id}>
-                <button className={`pick ${i.id === dish.id ? 'on' : ''}`} aria-pressed={i.id === dish.id} onClick={() => setSelectedId(i.id)}>
-                  <span className="pick-thumb"><Photo src={assetUrl(i.imageUrl)} alt="" /></span>
-                  <span className="pick-text">
-                    <strong>{i.name}</strong>
-                    <small>{i.modelUrl ? '3D model attached' : 'Photo only'}</small>
-                  </span>
-                  {i.modelUrl && <Check size={16} className="pick-check" aria-label="Has 3D model" />}
-                </button>
-              </li>
-            ))}
-            {filtered.length === 0 && <li className="muted">No dishes match.</li>}
-          </ul>
-        </section>
+        }
+      />
 
-        <section className="studio-main">
-          <div className="panel stage-panel">
-            <div className="panel-head tight">
-              <div>
-                <h2>{dish.name}</h2>
-                <p className="muted">{money(dish.price, restaurant.currency)} · {dish.category}</p>
-              </div>
-              <Chip tone={dish.modelUrl ? 'basil' : 'neutral'}>{dish.modelUrl ? 'Model attached' : 'No model yet'}</Chip>
+      <div className="studio-clean-layout">
+        {/* Left: Dish Selector */}
+        <aside className="panel studio-clean-sidebar" aria-label="Dishes">
+          <div className="studio-clean-sidebar-head">
+            <div className="studio-clean-sidebar-title">
+              <h2>Dishes</h2>
+              <span className="studio-clean-count">{count3D} in 3D</span>
             </div>
 
-            <div className="stage">
-              <div className="stage-floor" aria-hidden />
+            <div className="studio-clean-filter-pills" role="tablist">
+              <button
+                type="button"
+                className={`clean-pill ${filterType === 'all' ? 'active' : ''}`}
+                onClick={() => setFilterType('all')}
+              >
+                All ({items.length})
+              </button>
+              <button
+                type="button"
+                className={`clean-pill ${filterType === '3d' ? 'active' : ''}`}
+                onClick={() => setFilterType('3d')}
+              >
+                3D ({count3D})
+              </button>
+              <button
+                type="button"
+                className={`clean-pill ${filterType === 'photo' ? 'active' : ''}`}
+                onClick={() => setFilterType('photo')}
+              >
+                Photo ({countPhoto})
+              </button>
+            </div>
+          </div>
+
+          <div className="studio-clean-search">
+            <input
+              className="input studio-search-input"
+              type="search"
+              placeholder="Search dishes…"
+              aria-label="Search dishes"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+
+          <ul className="studio-clean-dish-list">
+            {filtered.map((i) => {
+              const isSelected = i.id === dish.id;
+              return (
+                <li key={i.id}>
+                  <button
+                    className={`clean-pick ${isSelected ? 'on' : ''}`}
+                    aria-pressed={isSelected}
+                    onClick={() => setSelectedId(i.id)}
+                  >
+                    <span className="clean-pick-thumb">
+                      <Photo src={assetUrl(i.imageUrl)} alt="" />
+                      {i.modelUrl && <span className="clean-3d-tag">3D</span>}
+                    </span>
+                    <span className="clean-pick-info">
+                      <strong className="clean-pick-name">{i.name}</strong>
+                      <span className="clean-pick-sub">
+                        {money(i.price, restaurant.currency)} · {i.category}
+                      </span>
+                    </span>
+                    {i.modelUrl && (
+                      <span className="clean-check-badge">
+                        <Check size={14} />
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+            {filtered.length === 0 && <li className="clean-empty-hint">No dishes match.</li>}
+          </ul>
+        </aside>
+
+        {/* Right / Main Workbench */}
+        <main className="studio-clean-main">
+          {/* Main 3D Stage Panel */}
+          <section className="panel studio-clean-stage-panel">
+            <div className="stage-panel-head">
+              <div>
+                <h2>{dish.name}</h2>
+                <p className="muted">
+                  {money(dish.price, restaurant.currency)} · {dish.category}
+                </p>
+              </div>
+
+              <div className="stage-panel-actions">
+                <Chip tone={dish.modelUrl ? 'basil' : 'neutral'}>
+                  {dish.modelUrl ? '3D Active' : 'Photo Only'}
+                </Chip>
+
+                <input
+                  ref={input}
+                  type="file"
+                  hidden
+                  accept=".glb,model/gltf-binary"
+                  onChange={(e) => {
+                    void upload(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
+
+                {dish.modelUrl ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      icon={<Upload size={14} />}
+                      onClick={() => input.current?.click()}
+                      disabled={uploading}
+                    >
+                      Replace .glb
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon={<Trash2 size={14} />}
+                      onClick={() => setConfirmRemove(true)}
+                    >
+                      Remove
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={<Upload size={14} />}
+                    onClick={() => input.current?.click()}
+                    disabled={uploading}
+                  >
+                    Upload .glb
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* 3D Model Stage (Clean Turntable without plates, angles, or ambiances) */}
+            <div className="studio-clean-viewport">
               {dish.modelUrl ? (
                 <ModelViewer
                   ref={viewer}
@@ -181,157 +352,162 @@ export function Studio() {
                   src={assetUrl(dish.modelUrl)!}
                   alt={`3D model of ${dish.name}`}
                   scale={currentScale}
-                  placement={currentPlacement}
-                  poster={undefined}
+                  placement="none"
+                  showControls={true}
                 />
               ) : (
-                <div className="stage-photo">
-                  <Photo src={assetUrl(dish.imageUrl)} alt={dish.name} />
-                  <p>Photo only. Upload a .glb to make it spin.</p>
+                <div className="stage-photo-clean">
+                  <div className="stage-photo-clean-img">
+                    <Photo src={assetUrl(dish.imageUrl)} alt={dish.name} />
+                  </div>
+                  <p className="muted">No 3D model attached yet.</p>
                 </div>
               )}
             </div>
 
-            <input ref={input} type="file" hidden accept=".glb,model/gltf-binary" onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ''; }} />
-
-            {dish.modelUrl ? (
-              <>
-                <div className="stage-actions">
-                  <div className="file-name">
-                    <Box size={16} />
-                    <span>{dish.modelFileName ?? 'model.glb'}</span>
-                  </div>
-                  <div className="actions">
-                    <Button size="sm" icon={<Smartphone size={15} />} onClick={testAr}>Test AR</Button>
-                    <Button size="sm" icon={<Upload size={15} />} onClick={() => input.current?.click()} disabled={uploading}>Replace</Button>
-                    <Button size="sm" variant="ghost" icon={<Trash2 size={15} />} onClick={() => setConfirmRemove(true)}>Remove</Button>
-                  </div>
-                </div>
-
-                {/* 3D Model Tuning: Plate Surface & Scale */}
-                <div className="tuning-section">
-                  <div className="tuning-head">
-                    <div>
-                      <strong>Plate & 3D Staging</strong>
-                      <p className="field-hint">Position the dish on a serving plate and adjust the scale so it looks natural in AR.</p>
-                    </div>
-                    {isTuningDirty && (
-                      <Button size="sm" variant="primary" loading={savingTuning} onClick={saveTuning}>Save 3D staging</Button>
-                    )}
-                  </div>
-
-                  <div className="tuning-grid">
-                    <div className="tuning-field">
-                      <label className="field-label">Serving plate style</label>
-                      <div className="plate-options">
-                        {[
-                          { id: 'plate', label: 'Porcelain Plate', icon: '🍽️' },
-                          { id: 'slate', label: 'Dark Slate', icon: '⬛' },
-                          { id: 'marble', label: 'Marble Board', icon: '⚪' },
-                          { id: 'wood', label: 'Wood Platter', icon: '🪵' },
-                          { id: 'none', label: 'No Plate', icon: '✨' }
-                        ].map((p) => (
-                          <button
-                            key={p.id}
-                            type="button"
-                            className={`plate-opt ${currentPlacement === p.id ? 'active' : ''}`}
-                            onClick={() => setCurrentPlacement(p.id)}
-                          >
-                            <span className="plate-opt-icon">{p.icon}</span>
-                            <span>{p.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="tuning-field">
-                      <div className="scale-head">
-                        <label className="field-label">Model scale</label>
-                        <span className="scale-val">{Number(currentScale).toFixed(2)}x</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.4"
-                        max="2.5"
-                        step="0.05"
-                        value={currentScale}
-                        onChange={(e) => setCurrentScale(parseFloat(e.target.value))}
-                        className="scale-slider"
-                      />
-                      <div className="scale-presets">
-                        {[
-                          { val: 0.75, label: 'Petite (0.75x)' },
-                          { val: 1.0, label: 'Standard (1.0x)' },
-                          { val: 1.25, label: 'Gourmet (1.25x)' },
-                          { val: 1.5, label: 'Grand (1.5x)' }
-                        ].map((preset) => (
-                          <button
-                            key={preset.val}
-                            type="button"
-                            className={`scale-preset-btn ${Math.abs(currentScale - preset.val) < 0.03 ? 'on' : ''}`}
-                            onClick={() => setCurrentScale(preset.val)}
-                          >
-                            {preset.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div
-                className={`dropzone ${drag ? 'drag' : ''}`}
-                onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
-                onDragLeave={() => setDrag(false)}
-                onDrop={onDrop}
-              >
-                <Upload size={22} />
-                <p><strong>Drop a .glb file here</strong> or</p>
-                <Button variant="primary" onClick={() => input.current?.click()} disabled={uploading}>Choose file</Button>
-                <small>GLB (glTF binary) only · up to 25 MB</small>
-              </div>
-            )}
+            {/* Upload Progress */}
             {uploading && (
-              <div className="upload-state" role="status">
-                <span>{progress! < 1 ? 'Uploading model' : 'Processing'}</span>
+              <div className="clean-upload-state" role="status">
+                <span>{progress! < 1 ? 'Uploading 3D model…' : 'Processing asset…'}</span>
                 <Progress value={progress!} />
               </div>
             )}
-          </div>
 
-          <div className="studio-aside">
-            <section className="panel phone-test">
-              <h2>Try it on your phone</h2>
+            {/* Dropzone for Photo-only Dishes */}
+            {!dish.modelUrl && (
+              <div
+                className={`clean-dropzone ${drag ? 'drag' : ''}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDrag(true);
+                }}
+                onDragLeave={() => setDrag(false)}
+                onDrop={onDrop}
+              >
+                <Upload size={24} />
+                <p>
+                  <strong>Drop a .glb file here</strong> or
+                </p>
+                <Button variant="primary" onClick={() => input.current?.click()} disabled={uploading}>
+                  Choose .glb file
+                </Button>
+                <small>GLB (glTF binary) up to 25 MB</small>
+              </div>
+            )}
+          </section>
+
+          {/* Bottom Dual Grid: Simple Scale Calibration & Phone AR Test */}
+          <div className="studio-clean-bottom-grid">
+            {/* Simple Scale Card (Only shown if dish has 3D model) */}
+            {dish.modelUrl ? (
+              <section className="panel clean-scale-card">
+                <div className="clean-card-head">
+                  <div>
+                    <h3>Model Scale</h3>
+                    <p className="muted">Calibrate life-size dimensions for augmented reality.</p>
+                  </div>
+                  <span className="scale-num-badge">{Number(currentScale).toFixed(2)}x</span>
+                </div>
+
+                <div className="clean-scale-slider-wrap">
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.05"
+                    value={currentScale}
+                    onChange={(e) => setCurrentScale(parseFloat(e.target.value))}
+                    className="clean-scale-slider"
+                  />
+                </div>
+
+                <div className="clean-scale-presets">
+                  {[
+                    { val: 0.75, label: '0.75x (Petite)' },
+                    { val: 1.0, label: '1.00x (Standard)' },
+                    { val: 1.25, label: '1.25x (Gourmet)' },
+                    { val: 1.5, label: '1.50x (Sharing)' }
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      type="button"
+                      className={`clean-scale-preset-btn ${
+                        Math.abs(currentScale - p.val) < 0.03 ? 'active' : ''
+                      }`}
+                      onClick={() => setCurrentScale(p.val)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                {isScaleDirty && (
+                  <div className="clean-scale-save-row">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      loading={savingScale}
+                      onClick={saveScale}
+                    >
+                      Save Scale
+                    </Button>
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {/* Test on Phone Card */}
+            <section className="panel clean-phone-card">
+              <div className="clean-card-head">
+                <div>
+                  <h3>Test on Your Phone</h3>
+                  <p className="muted">Point your phone camera to test AR on a real table.</p>
+                </div>
+              </div>
+
               {restaurant.published ? (
-                <>
-                  <p className="muted">Scan to open this dish in your live menu, then tap “View on your table”.</p>
-                  <QrCode value={phoneLink} size={132} />
-                </>
+                <div className="clean-phone-body">
+                  <div className="clean-qr-frame">
+                    <QrCode value={phoneLink} size={130} />
+                  </div>
+                  <div className="clean-phone-actions">
+                    <Button
+                      size="sm"
+                      variant={copiedLink ? 'primary' : 'secondary'}
+                      icon={copiedLink ? <Check size={14} /> : <Copy size={14} />}
+                      onClick={copyPhoneLink}
+                    >
+                      {copiedLink ? 'Copied!' : 'Copy Link'}
+                    </Button>
+                    <a
+                      href={phoneLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-ghost btn-sm"
+                    >
+                      Open Live Link ↗
+                    </a>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <p className="muted">AR works from the public menu link on a phone. Publish your menu to get a link you can open.</p>
-                  <ButtonLink to="/app/share" size="sm">Go to sharing</ButtonLink>
-                </>
+                <div className="clean-unpub-box">
+                  <p className="muted">
+                    AR requires a public link. Publish your menu to test on phones.
+                  </p>
+                  <ButtonLink to="/app/share" size="sm" variant="accent">
+                    Publish & Share
+                  </ButtonLink>
+                </div>
               )}
             </section>
-            <section className="panel tips">
-              <h2>Getting a good model</h2>
-              <ul>
-                <li>Export as <b>GLB</b>. It bundles textures into one file.</li>
-                <li>Keep it under <b>25 MB</b>. Textures of 1024 to 2048 px are plenty.</li>
-                <li>Adjust the <b>Scale</b> and <b>Plate Style</b> above so the food sits appetizingly on table surface.</li>
-                <li>Apps like Polycam or Luma can scan a dish with a phone and export GLB.</li>
-              </ul>
-            </section>
           </div>
-        </section>
+        </main>
       </div>
 
       <ConfirmDialog
         open={confirmRemove}
         title="Remove this 3D model?"
-        message={`${dish.name} will go back to a photo-only dish. You can upload a model again at any time.`}
+        message={`"${dish.name}" will revert to a photo-only dish. You can upload a 3D model again at any time.`}
         confirmLabel="Remove model"
         busy={removing}
         onConfirm={removeModel}

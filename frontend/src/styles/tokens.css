@@ -1,36 +1,60 @@
 :root {
-  /* Surfaces: glazed porcelain with indigo ink, cobalt as the brand colour, saffron for 3D/AR moments. */
-  --porcelain: #f3f5f9;
-  --glaze: #ffffff;
-  --ink: #0e1a3b;
-  --slate: #566180;
-  --line: #dce1ec;
-  --line-strong: #c6cddc;
+  /* ==========================================================================
+     Atelier AR - Luxury Obsidian Dark Design System
+     Commercial SaaS Theme for High-End Restaurants & Hospitality
+     ========================================================================== */
 
-  --cobalt: #1d3fd6;
-  --cobalt-deep: #132c9e;
-  --cobalt-tint: #e6ebfc;
-  --saffron: #f2a33a;
-  --saffron-deep: #8a5004;
-  --saffron-tint: #fdf0da;
-  --basil: #1e8a5a;
-  --basil-tint: #dcf3e7;
-  --chili: #cf3b2a;
-  --chili-tint: #fbe5e1;
+  /* Surface Hierarchy */
+  --porcelain: #080b11;            /* Primary dark obsidian canvas */
+  --glaze: #0f1420;                /* Card, panel & container surfaces */
+  --glaze-raised: #161c2c;         /* Elevated cards & interactive hover */
+  --glaze-active: #1d2538;         /* Active state surface */
 
+  /* Text & Typography */
+  --ink: #f8fafc;                  /* High-contrast crisp primary text */
+  --slate: #94a3b8;                /* Secondary & descriptive muted text */
+  --slate-subtle: #64748b;         /* Placeholder & hint text */
+
+  /* Structural Borders */
+  --line: rgba(255, 255, 255, 0.08);        /* Subtle dividers & borders */
+  --line-strong: rgba(255, 255, 255, 0.16); /* Interactive & focus borders */
+
+  /* Signature Color Accents */
+  --cobalt: #3b82f6;               /* Luminous electric cobalt blue */
+  --cobalt-deep: #2563eb;
+  --cobalt-tint: rgba(59, 130, 246, 0.16);
+
+  --saffron: #f59e0b;              /* Warm gold / saffron for 3D & AR */
+  --saffron-deep: #d97706;
+  --saffron-tint: rgba(245, 158, 11, 0.16);
+
+  --basil: #10b981;                /* Emerald basil green for success */
+  --basil-deep: #059669;
+  --basil-tint: rgba(16, 185, 129, 0.16);
+
+  --chili: #ef4444;                /* Coral chili red for sold-out & warnings */
+  --chili-deep: #dc2626;
+  --chili-tint: rgba(239, 68, 68, 0.16);
+
+  /* Dynamic Restaurant Accent */
   --accent: var(--cobalt);
   --on-accent: #ffffff;
   --accent-ink: var(--cobalt);
 
-  --r-sm: 10px;
+  /* Border Radii */
+  --r-sm: 8px;
   --r-md: 12px;
-  --r-lg: 20px;
-  --r-xl: 32px;
+  --r-lg: 18px;
+  --r-xl: 28px;
 
-  --shadow-card: 0 1px 0 rgba(14, 26, 59, 0.04), 0 10px 24px -14px rgba(19, 44, 158, 0.25);
-  --shadow-pop: 0 28px 60px -24px rgba(19, 44, 158, 0.45);
+  /* Shadows & Depth */
+  --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-pop: 0 24px 60px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --shadow-glow: 0 0 30px -5px color-mix(in srgb, var(--accent) 30%, transparent);
+
+  /* Typography */
   --font: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  /* Blue-pottery petal tile used behind hero and empty areas. */
-  --tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%231D3FD6' stroke-width='1.3' stroke-opacity='.28'%3E%3Ccircle cx='36' cy='36' r='5'/%3E%3Cpath d='M36 9c7 9 7 18 0 27-7-9-7-18 0-27zM63 36c-9 7-18 7-27 0 9-7 18-7 27 0zM36 63c-7-9-7-18 0-27 7 9 7 18 0 27zM9 36c9-7 18-7 27 0-9 7-18 7-27 0z'/%3E%3C/g%3E%3C/svg%3E");
+  /* Subtle Decorative Pattern */
+  --tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%233B82F6' stroke-width='1.2' stroke-opacity='.12'%3E%3Ccircle cx='36' cy='36' r='5'/%3E%3Cpath d='M36 9c7 9 7 18 0 27-7-9-7-18 0-27zM63 36c-9 7-18 7-27 0 9-7 18-7 27 0zM36 63c-7-9-7-18 0-27 7 9 7 18 0 27zM9 36c9-7 18-7 27 0-9 7-18 7-27 0z'/%3E%3C/g%3E%3C/svg%3E");
 }

@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
+  Bell,
   Box,
   Check,
   Copy,
+  Dices,
   ExternalLink,
+  Flame,
+  GlassWater,
   Globe,
   Instagram,
   MapPin,
   MessageCircle,
   Minus,
-  Monitor,
   Phone,
   Plus,
   QrCode,
@@ -20,7 +23,10 @@ import {
   Smartphone,
   Sparkles,
   Trash2,
+  Users,
+  Utensils,
   Wifi,
+  Wine,
   X
 } from 'lucide-react';
 import { api, assetUrl, PublicItem, PublicMenu, PublicRestaurant } from '../lib/api';
@@ -53,7 +59,7 @@ function GuestPublic({ slug }: { slug: string }) {
       .then((m) => {
         if (cancelled) return;
         setData(m);
-        document.title = `${m.restaurant.name} | 3D Digital Menu`;
+        document.title = `${m.restaurant.name} | 3D Interactive Dining Menu`;
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -99,7 +105,6 @@ function GuestPublic({ slug }: { slug: string }) {
 function GuestPreview() {
   const { restaurant } = useAuth();
   const menu = useMenu();
-  const [deviceMode, setDeviceMode] = useState<'mobile' | 'full'>('mobile');
 
   if (!restaurant) return null;
   if (menu.status === 'loading') {
@@ -114,7 +119,7 @@ function GuestPreview() {
 
   return (
     <div className="preview-container">
-      {/* Top Preview Controls Bar */}
+      {/* Clean Top Preview Controls Bar */}
       <header className="preview-topbar">
         <div className="preview-topbar-left">
           <Button size="sm" icon={<ArrowLeft size={15} />} onClick={() => navigate('/app')}>
@@ -125,29 +130,8 @@ function GuestPreview() {
           </span>
         </div>
 
-        <div className="preview-topbar-center">
-          <div className="device-switcher" role="tablist" aria-label="Device view switcher">
-            <button
-              type="button"
-              className={`dev-btn ${deviceMode === 'mobile' ? 'on' : ''}`}
-              onClick={() => setDeviceMode('mobile')}
-            >
-              <Smartphone size={14} />
-              <span>iPhone View</span>
-            </button>
-            <button
-              type="button"
-              className={`dev-btn ${deviceMode === 'full' ? 'on' : ''}`}
-              onClick={() => setDeviceMode('full')}
-            >
-              <Monitor size={14} />
-              <span>Full Screen</span>
-            </button>
-          </div>
-        </div>
-
         <div className="preview-topbar-right">
-          {restaurant.published && (
+          {restaurant.published ? (
             <a
               href={`/m/${restaurant.slug}`}
               target="_blank"
@@ -158,29 +142,16 @@ function GuestPreview() {
               <span>/m/{restaurant.slug}</span>
               <ExternalLink size={13} />
             </a>
+          ) : (
+            <span className="preview-hint-pill">Publish in QR & Sharing to make live for guests</span>
           )}
         </div>
       </header>
 
-      {/* Main Preview Stage */}
-      {deviceMode === 'mobile' ? (
-        <div className="preview-device-stage">
-          <div className="iphone-frame">
-            <div className="iphone-notch">
-              <span className="iphone-speaker" />
-              <span className="iphone-camera" />
-            </div>
-            <div className="iphone-screen">
-              <GuestView restaurant={restaurant} items={items} preview published={restaurant.published} isFramed />
-            </div>
-            <div className="iphone-home-bar" />
-          </div>
-        </div>
-      ) : (
-        <div className="preview-full-wrapper">
-          <GuestView restaurant={restaurant} items={items} preview published={restaurant.published} />
-        </div>
-      )}
+      {/* Clean Full Responsive View */}
+      <div className="preview-content">
+        <GuestView restaurant={restaurant} items={items} preview />
+      </div>
     </div>
   );
 }
@@ -190,30 +161,50 @@ type ViewProps = {
   items: PublicItem[];
   slug?: string;
   preview?: boolean;
-  published?: boolean;
-  isFramed?: boolean;
 };
 
 type FilterKey = 'all' | 'featured' | '3d' | 'veg' | 'halal' | 'spicy' | 'gluten-free';
 
-function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
+function GuestView({ restaurant, items, slug, preview }: ViewProps) {
   const toast = useToast();
   const { search } = useLocation();
   const [query, setQuery] = useState('');
   const [activeCat, setActiveCat] = useState<string>('');
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selected, setSelected] = useState<PublicItem | null>(null);
+
+  // Modals & Drawers
   const [showWifi, setShowWifi] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showRoulette, setShowRoulette] = useState(false);
+  const [showService, setShowService] = useState(false);
   const [copiedWifi, setCopiedWifi] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // Table Order / Wishlist state
+  // Table Order / Wishlist state with persisted Table Number
   const [order, setOrder] = useState<Record<string, OrderEntry>>({});
   const [orderOpen, setOrderOpen] = useState(false);
-  const [tableNumber, setTableNumber] = useState('');
+  const [tableNumber, setTableNumber] = useState(() => {
+    try {
+      return localStorage.getItem(`atelier.table.${slug || 'menu'}`) || '';
+    } catch {
+      return '';
+    }
+  });
   const [orderNotes, setOrderNotes] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
+  const [splitGuests, setSplitGuests] = useState(1);
+
+  // Remember table number in storage
+  useEffect(() => {
+    if (tableNumber.trim()) {
+      try {
+        localStorage.setItem(`atelier.table.${slug || 'menu'}`, tableNumber.trim());
+      } catch {
+        /* storage unavailable */
+      }
+    }
+  }, [tableNumber, slug]);
 
   const track = (type: 'SCAN' | 'ITEM_VIEW' | 'MODEL_VIEW' | 'AR_LAUNCH', itemId?: string) => {
     if (slug && !preview) void api.track(slug, type, itemId);
@@ -259,7 +250,7 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
     void api.track(slug, 'SCAN');
   }, [slug, preview]);
 
-  // Deep link from the studio's phone-test QR code: /m/slug?dish=<id>
+  // Deep link from studio phone-test QR code: /m/slug?dish=<id>
   const deepLinked = useRef(false);
   useEffect(() => {
     const id = search.get('dish');
@@ -271,7 +262,7 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
     }
   }, [items, search]);
 
-  // Highlight the category tab for the section currently in view.
+  // Highlight category tab for currently visible section
   useEffect(() => {
     const sections = document.querySelectorAll<HTMLElement>('[data-cat]');
     if (!sections.length) return;
@@ -349,7 +340,7 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
 
   const cur = restaurant.currency || 'USD';
 
-  // Construct WhatsApp Order Message
+  // Construct structured WhatsApp Order message
   const sendWhatsAppOrder = () => {
     if (!restaurant.whatsapp) return;
     const phone = cleanPhone(restaurant.whatsapp);
@@ -361,6 +352,9 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
     });
     msg += `─────────────────────────\n`;
     msg += `💵 *Total Bill: ${money(totalOrderAmount, cur)}*\n`;
+    if (splitGuests > 1) {
+      msg += `👥 *Split for ${splitGuests} guests:* ${money(totalOrderAmount / splitGuests, cur)} each\n`;
+    }
     if (orderNotes.trim()) msg += `📝 *Notes:* ${orderNotes.trim()}\n`;
     msg += `\n_Sent via Atelier AR 3D Menu_`;
 
@@ -368,15 +362,31 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
 
+  // Quick Table Service Request message via WhatsApp
+  const sendServiceRequest = (serviceType: string) => {
+    if (!restaurant.whatsapp) {
+      toast.info(`Request recorded: "${serviceType}". Please notify your server.`);
+      setShowService(false);
+      return;
+    }
+    const phone = cleanPhone(restaurant.whatsapp);
+    const tbl = tableNumber.trim() ? tableNumber.trim() : 'Guest Table';
+    const msg = `🔔 *Table Service Request*\n📍 Location: *${tbl}*\n🛎️ Request: *${serviceType}*\n\n_Sent via Atelier AR Menu_`;
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    setShowService(false);
+    toast.success(`Service request sent for ${tbl}!`);
+  };
+
   return (
-    <div className={`guest guest-dark ${isFramed ? 'is-framed' : ''}`} style={accentStyle(restaurant.accent)}>
-      {/* Hero Header */}
+    <div className="guest guest-dark" style={accentStyle(restaurant.accent)}>
+      {/* Luxury Hero Header */}
       <header
         className="g-hero"
         style={
           restaurant.coverUrl
             ? {
-                backgroundImage: `linear-gradient(180deg, rgba(11,15,23,0.3) 0%, rgba(11,15,23,0.85) 65%, rgba(11,15,23,1) 100%), url(${assetUrl(
+                backgroundImage: `linear-gradient(180deg, rgba(8,11,17,0.3) 0%, rgba(8,11,17,0.85) 65%, #080b11 100%), url(${assetUrl(
                   restaurant.coverUrl
                 )})`
               }
@@ -384,6 +394,16 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
         }
       >
         <div className="g-hero-top-actions">
+          <button
+            type="button"
+            className="g-action-pill g-service-pill"
+            onClick={() => setShowService(true)}
+            aria-label="Table Service Requests"
+            title="Call server or request water"
+          >
+            <Bell size={14} />
+            <span>Service</span>
+          </button>
           <button type="button" className="g-action-pill" onClick={() => setShowShare(true)} aria-label="Share Menu">
             <Share2 size={14} />
             <span>Share</span>
@@ -481,7 +501,7 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
           <Search size={16} aria-hidden />
           <input
             type="search"
-            placeholder="Search appetizers, steaks, cocktails…"
+            placeholder="Search appetizers, wagyu, pasta, wine…"
             aria-label="Search the menu"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -565,6 +585,22 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
         )}
       </div>
 
+      {/* Gamified Interactive Culinary Discovery Bar */}
+      {items.length > 2 && (
+        <div className="g-discovery-banner">
+          <div className="g-discovery-card" onClick={() => setShowRoulette(true)} role="button" tabIndex={0}>
+            <div className="g-discovery-icon">
+              <Dices size={22} />
+            </div>
+            <div className="g-discovery-text">
+              <strong>Can't decide what to order?</strong>
+              <span>Spin the Chef's 3D Mystery Roulette to pick your signature dish</span>
+            </div>
+            <span className="g-discovery-btn">Spin 🎲</span>
+          </div>
+        </div>
+      )}
+
       {/* Main Dishes Stream */}
       <main className="g-main">
         {items.length === 0 && (
@@ -589,12 +625,15 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
           />
         )}
 
-        {/* Featured Showcase */}
+        {/* Signature Creations Rail */}
         {featured.length > 0 && !q && filter === 'all' && (
           <section className="g-featured" aria-label="Chef's signature plates">
             <div className="g-featured-head">
-              <h2>Signature Creations</h2>
-              <span className="g-featured-sub">Chef's recommended highlights</span>
+              <div className="g-featured-title-wrap">
+                <Flame size={20} className="flame-icon" />
+                <h2>Chef's Signatures</h2>
+              </div>
+              <span className="g-featured-sub">Most loved highlights</span>
             </div>
             <div className="g-rail">
               {featured.map((i) => (
@@ -608,11 +647,13 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
                 >
                   <div className="g-feature-img">
                     <Photo src={assetUrl(i.imageUrl)} alt={i.name} />
-                    {i.modelUrl && (
+                    {i.modelUrl ? (
                       <span className="badge-3d badge-3d-glow">
                         <Box size={12} />
                         <span>3D & AR</span>
                       </span>
+                    ) : (
+                      <span className="badge-signature">Signature</span>
                     )}
                     <span className="g-card-price">{money(i.price, cur)}</span>
                   </div>
@@ -645,8 +686,9 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
               <span className="g-section-count">{g.items.length} dishes</span>
             </div>
             <ul className="g-dish-list">
-              {g.items.map((i) => {
+              {g.items.map((i, idx) => {
                 const inOrder = order[i.id];
+                const isPopular = i.featured || idx === 0;
                 return (
                   <li key={i.id}>
                     <div
@@ -660,8 +702,13 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
                           <strong>{i.name}</strong>
                           {i.modelUrl && (
                             <span className="badge-3d-inline">
-                              <Box size={12} />
+                              <Box size={11} />
                               3D
+                            </span>
+                          )}
+                          {isPopular && i.available && (
+                            <span className="badge-hot-tag">
+                              <Flame size={10} /> Popular
                             </span>
                           )}
                         </div>
@@ -677,7 +724,8 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
                               </span>
                             ))}
                         </div>
-                        {/* Order Add Button */}
+
+                        {/* Order Add Button with Feedback */}
                         <div className="g-row-order-ctrl" onClick={(e) => e.stopPropagation()}>
                           {inOrder ? (
                             <div className="order-counter">
@@ -731,33 +779,42 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
         ))}
       </main>
 
-      {/* Floating "My Table Order" Bar */}
-      {totalItemsCount > 0 && (
-        <div className="floating-order-bar">
-          <div className="floating-order-in" onClick={() => setOrderOpen(true)} role="button" tabIndex={0}>
-            <div className="order-summary-chip">
-              <ShoppingBag size={18} />
-              <span className="order-badge">{totalItemsCount}</span>
+      {/* Floating Bottom Action Bar with Order Summary & Waiter Call */}
+      <div className="floating-bottom-bar">
+        <div className="floating-bottom-inner">
+          <button
+            type="button"
+            className="floating-service-btn"
+            onClick={() => setShowService(true)}
+            aria-label="Table service request"
+            title="Call server or request water"
+          >
+            <Bell size={18} />
+            <span>Service</span>
+          </button>
+
+          {totalItemsCount > 0 ? (
+            <div className="floating-order-in" onClick={() => setOrderOpen(true)} role="button" tabIndex={0}>
+              <div className="order-summary-chip">
+                <ShoppingBag size={18} />
+                <span className="order-badge">{totalItemsCount}</span>
+              </div>
+              <div className="order-summary-text">
+                <strong>My Table Order</strong>
+                <span>
+                  {totalItemsCount} {totalItemsCount === 1 ? 'dish' : 'dishes'} · {money(totalOrderAmount, cur)}
+                </span>
+              </div>
+              <span className="btn-view-order">View Order →</span>
             </div>
-            <div className="order-summary-text">
-              <strong>My Table Order</strong>
-              <span>
-                {totalItemsCount} {totalItemsCount === 1 ? 'item' : 'items'} · {money(totalOrderAmount, cur)}
-              </span>
+          ) : (
+            <div className="floating-empty-hint" onClick={() => jump(groups[0]?.name || '')} role="button" tabIndex={0}>
+              <Utensils size={16} />
+              <span>Tap "+ Add" on any dish to build your table order</span>
             </div>
-            <button
-              type="button"
-              className="btn-view-order"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOrderOpen(true);
-              }}
-            >
-              View Order →
-            </button>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Footer */}
       <footer className="g-foot">
@@ -767,9 +824,10 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
         </Link>
       </footer>
 
-      {/* Dish Detailed Sheet with 3D Plate Staging */}
+      {/* 3D Dish Detailed Sheet with Live Plating Switcher & Pairing Upsell */}
       <DishSheet
         item={selected}
+        allItems={items}
         currency={cur}
         onClose={() => setSelected(null)}
         onModelView={(id) => track('MODEL_VIEW', id)}
@@ -777,7 +835,32 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
         onAddToOrder={(i) => addToOrder(i)}
       />
 
-      {/* Table Order Modal Drawer */}
+      {/* Interactive Chef's Mystery Roulette Modal */}
+      <ChefRouletteModal
+        open={showRoulette}
+        items={items}
+        currency={cur}
+        onClose={() => setShowRoulette(false)}
+        onSelect={(dish) => {
+          setShowRoulette(false);
+          open(dish);
+        }}
+        onAddToOrder={(dish) => {
+          addToOrder(dish);
+          setShowRoulette(false);
+        }}
+      />
+
+      {/* Instant Table Service Requests Modal */}
+      <ServiceModal
+        open={showService}
+        tableNumber={tableNumber}
+        onSetTableNumber={setTableNumber}
+        onClose={() => setShowService(false)}
+        onRequest={sendServiceRequest}
+      />
+
+      {/* Table Order Modal Drawer with Smart Bill Splitter */}
       <Dialog
         open={orderOpen}
         onClose={() => setOrderOpen(false)}
@@ -800,10 +883,10 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
             {orderList.length === 0 ? (
               <EmptyState
                 title="Your order is empty"
-                text="Tap '+ Add' on any dish to place it into your table order."
+                text="Tap '+ Add' on dishes you'd like to taste."
                 action={
                   <Button size="sm" onClick={() => setOrderOpen(false)}>
-                    Browse Menu
+                    Explore Menu
                   </Button>
                 }
               />
@@ -811,7 +894,7 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
               <>
                 {/* Table Number Prompt */}
                 <div className="table-number-row">
-                  <label htmlFor="table-num-input">Table Number / Location:</label>
+                  <label htmlFor="table-num-input">Table Number / Dining Area:</label>
                   <input
                     id="table-num-input"
                     type="text"
@@ -862,9 +945,35 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
                   ))}
                 </div>
 
+                {/* Live Bill Splitter Widget */}
+                <div className="bill-splitter-box">
+                  <div className="splitter-head">
+                    <Users size={16} />
+                    <span>Split Bill Among Dining Companions</span>
+                  </div>
+                  <div className="splitter-options">
+                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        className={`split-chip ${splitGuests === num ? 'on' : ''}`}
+                        onClick={() => setSplitGuests(num)}
+                      >
+                        {num === 1 ? 'Solo' : `${num} guests`}
+                      </button>
+                    ))}
+                  </div>
+                  {splitGuests > 1 && (
+                    <div className="splitter-result">
+                      <span>Per guest share:</span>
+                      <strong>{money(totalOrderAmount / splitGuests, cur)} / person</strong>
+                    </div>
+                  )}
+                </div>
+
                 {/* Optional Special Instructions */}
                 <div className="order-notes-wrap">
-                  <label htmlFor="order-notes">Special Requests / Allergies:</label>
+                  <label htmlFor="order-notes">Kitchen Notes / Dietary Requests:</label>
                   <textarea
                     id="order-notes"
                     placeholder="e.g. Dressing on side, extra spice, water with lemon…"
@@ -925,7 +1034,7 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
         <div className="receipt-card">
           <div className="receipt-card-head">
             <h3>{restaurant.name}</h3>
-            <p>Table Order Summary</p>
+            <p>Table Order Ticket</p>
             {tableNumber.trim() && <span className="receipt-table-badge">Table: {tableNumber.trim()}</span>}
           </div>
           <div className="receipt-items">
@@ -938,9 +1047,15 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
               </div>
             ))}
           </div>
+          {splitGuests > 1 && (
+            <div className="receipt-split">
+              <span>Split for {splitGuests} guests</span>
+              <b>{money(totalOrderAmount / splitGuests, cur)} each</b>
+            </div>
+          )}
           {orderNotes.trim() && (
             <div className="receipt-note">
-              <strong>Note:</strong> {orderNotes.trim()}
+              <strong>Kitchen Note:</strong> {orderNotes.trim()}
             </div>
           )}
           <div className="receipt-total">
@@ -1068,8 +1183,10 @@ function GuestView({ restaurant, items, slug, preview, isFramed }: ViewProps) {
   );
 }
 
+/** 3D Dish Detail Sheet with Live Plate Switcher & Cross-Sell Pairing */
 function DishSheet({
   item,
+  allItems,
   currency,
   onClose,
   onModelView,
@@ -1077,6 +1194,7 @@ function DishSheet({
   onAddToOrder
 }: {
   item: PublicItem | null;
+  allItems: PublicItem[];
   currency: string;
   onClose: () => void;
   onModelView: (id: string) => void;
@@ -1087,14 +1205,24 @@ function DishSheet({
   const [arHint, setArHint] = useState(false);
   const [last, setLast] = useState<PublicItem | null>(null);
 
+  // Live Platter Switcher State on the 3D stage
+  const [activePlacement, setActivePlacement] = useState<PlatePlacement>('plate');
+
   useEffect(() => {
     if (item) {
       setLast(item);
       setArHint(false);
+      setActivePlacement((item.modelPlacement as PlatePlacement) || 'plate');
     }
   }, [item]);
 
   const shown = item ?? last;
+
+  // Smart pairing suggestion: find a complementary dish from another category
+  const pairing = useMemo(() => {
+    if (!shown) return null;
+    return allItems.find((i) => i.id !== shown.id && i.available && i.category !== shown.category);
+  }, [allItems, shown]);
 
   return (
     <Dialog open={Boolean(item)} onClose={onClose} variant="sheet" label={shown?.name ?? 'Dish'}>
@@ -1113,7 +1241,7 @@ function DishSheet({
                 src={assetUrl(shown.modelUrl)!}
                 alt={`3D model of ${shown.name}`}
                 scale={shown.modelScale ?? 1.0}
-                placement={(shown.modelPlacement as PlatePlacement) || 'plate'}
+                placement={activePlacement}
                 showControls={true}
                 onLoad={() => onModelView(shown.id)}
               />
@@ -1123,6 +1251,43 @@ function DishSheet({
               </div>
             )}
           </div>
+
+          {/* Interactive Plating Surface Switcher for 3D Dishes */}
+          {shown.modelUrl && (
+            <div className="sheet-plating-bar">
+              <span className="plating-label">Plate surface:</span>
+              <div className="plating-pills">
+                <button
+                  type="button"
+                  className={`plating-pill ${activePlacement === 'plate' ? 'on' : ''}`}
+                  onClick={() => setActivePlacement('plate')}
+                >
+                  🍽️ Ceramic
+                </button>
+                <button
+                  type="button"
+                  className={`plating-pill ${activePlacement === 'slate' ? 'on' : ''}`}
+                  onClick={() => setActivePlacement('slate')}
+                >
+                  🪨 Slate
+                </button>
+                <button
+                  type="button"
+                  className={`plating-pill ${activePlacement === 'marble' ? 'on' : ''}`}
+                  onClick={() => setActivePlacement('marble')}
+                >
+                  🏛️ Marble
+                </button>
+                <button
+                  type="button"
+                  className={`plating-pill ${activePlacement === 'wood' ? 'on' : ''}`}
+                  onClick={() => setActivePlacement('wood')}
+                >
+                  🪵 Wood
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Dish Information & Action Details */}
           <div className="sheet-body">
@@ -1155,9 +1320,37 @@ function DishSheet({
                   onClose();
                 }}
               >
-                Add to My Table Order · {money(shown.price, currency)}
+                Add to Table Order · {money(shown.price, currency)}
               </Button>
             </div>
+
+            {/* Smart Sommelier / Chef Pairing Cross-Sell Widget */}
+            {pairing && (
+              <div className="sheet-pairing-card">
+                <div className="pairing-card-head">
+                  <Wine size={15} />
+                  <span>Chef's Recommended Pairing</span>
+                </div>
+                <div className="pairing-card-body">
+                  <div className="pairing-card-img">
+                    <Photo src={assetUrl(pairing.imageUrl)} alt={pairing.name} />
+                  </div>
+                  <div className="pairing-card-info">
+                    <strong>{pairing.name}</strong>
+                    <span>+{money(pairing.price, currency)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-add-pairing"
+                    onClick={() => {
+                      onAddToOrder(pairing);
+                    }}
+                  >
+                    <Plus size={13} /> Add Pairing
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* AR Button */}
             {shown.modelUrl ? (
@@ -1186,6 +1379,191 @@ function DishSheet({
           </div>
         </div>
       )}
+    </Dialog>
+  );
+}
+
+/** Chef's Mystery Dish Roulette Modal */
+function ChefRouletteModal({
+  open,
+  items,
+  currency,
+  onClose,
+  onSelect,
+  onAddToOrder
+}: {
+  open: boolean;
+  items: PublicItem[];
+  currency: string;
+  onClose: () => void;
+  onSelect: (dish: PublicItem) => void;
+  onAddToOrder: (dish: PublicItem) => void;
+}) {
+  const availableItems = useMemo(() => items.filter((i) => i.available), [items]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [hasLanded, setHasLanded] = useState(false);
+
+  const spin = () => {
+    if (availableItems.length === 0 || isSpinning) return;
+    setIsSpinning(true);
+    setHasLanded(false);
+    let counter = 0;
+    const totalSpins = 20 + Math.floor(Math.random() * 10);
+    const interval = setInterval(() => {
+      setSelectedIdx((prev) => (prev + 1) % availableItems.length);
+      counter++;
+      if (counter >= totalSpins) {
+        clearInterval(interval);
+        setIsSpinning(false);
+        setHasLanded(true);
+      }
+    }, 75);
+  };
+
+  useEffect(() => {
+    if (open) {
+      setHasLanded(false);
+      setIsSpinning(false);
+    }
+  }, [open]);
+
+  const currentDish = availableItems[selectedIdx];
+
+  return (
+    <Dialog open={open} onClose={onClose} variant="modal" label="Chef's 3D Roulette" className="roulette-dialog">
+      <div className="roulette-modal-content">
+        <div className="roulette-head">
+          <div className="roulette-icon">
+            <Dices size={24} />
+          </div>
+          <h3>Chef's 3D Dish Roulette</h3>
+          <p>Can't decide? Let fate and our culinary masters pick your dish tonight.</p>
+        </div>
+
+        {currentDish && (
+          <div className={`roulette-card ${isSpinning ? 'is-spinning' : ''} ${hasLanded ? 'has-landed' : ''}`}>
+            <div className="roulette-dish-img">
+              <Photo src={assetUrl(currentDish.imageUrl)} alt={currentDish.name} />
+              {currentDish.modelUrl && (
+                <span className="badge-3d badge-3d-corner">
+                  <Box size={11} /> 3D
+                </span>
+              )}
+            </div>
+            <div className="roulette-dish-details">
+              <span className="roulette-cat">{currentDish.category}</span>
+              <strong>{currentDish.name}</strong>
+              <b>{money(currentDish.price, currency)}</b>
+              {currentDish.description && <p>{currentDish.description}</p>}
+            </div>
+          </div>
+        )}
+
+        <div className="roulette-actions">
+          <Button
+            variant="accent"
+            size="md"
+            className="btn-spin-now"
+            icon={<Dices size={18} />}
+            loading={isSpinning}
+            onClick={spin}
+          >
+            {isSpinning ? 'Spinning the kitchen…' : hasLanded ? 'Spin Again 🎲' : 'Spin the Wheel 🎲'}
+          </Button>
+
+          {hasLanded && currentDish && (
+            <div className="roulette-landed-actions">
+              <Button
+                variant="primary"
+                size="md"
+                className="wide"
+                icon={<Plus size={16} />}
+                onClick={() => onAddToOrder(currentDish)}
+              >
+                Add This Dish to Order
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onSelect(currentDish)}>
+                Inspect in 3D Tasting Room →
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </Dialog>
+  );
+}
+
+/** Instant Table Service Request Modal */
+function ServiceModal({
+  open,
+  tableNumber,
+  onSetTableNumber,
+  onClose,
+  onRequest
+}: {
+  open: boolean;
+  tableNumber: string;
+  onSetTableNumber: (val: string) => void;
+  onClose: () => void;
+  onRequest: (serviceType: string) => void;
+}) {
+  const REQUEST_OPTIONS = [
+    { label: 'Fresh Water Refill', icon: GlassWater, desc: 'Chilled drinking water for the table' },
+    { label: 'Request the Check / Bill', icon: QrCode, desc: 'Ready to settle the bill' },
+    { label: 'Call Server to Table', icon: Bell, desc: 'We have questions about the menu' },
+    { label: 'Extra Cutlery & Napkins', icon: Utensils, desc: 'Fork, spoon, or clean cloth napkins' }
+  ];
+
+  return (
+    <Dialog open={open} onClose={onClose} variant="sheet" label="Table Service" className="service-dialog">
+      <div className="service-modal-content">
+        <div className="service-head">
+          <div className="service-icon">
+            <Bell size={22} />
+          </div>
+          <div>
+            <h3>Table Service Request</h3>
+            <p>One-tap dining requests sent instantly to the restaurant.</p>
+          </div>
+          <button type="button" className="sheet-close-btn" onClick={onClose} aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="service-table-input">
+          <label htmlFor="service-tbl">Your Table Number / Seating:</label>
+          <input
+            id="service-tbl"
+            type="text"
+            placeholder="e.g. Table 4, Patio Booth"
+            value={tableNumber}
+            onChange={(e) => onSetTableNumber(e.target.value)}
+          />
+        </div>
+
+        <div className="service-options-grid">
+          {REQUEST_OPTIONS.map((opt) => {
+            const Icon = opt.icon;
+            return (
+              <button
+                key={opt.label}
+                type="button"
+                className="service-option-card"
+                onClick={() => onRequest(opt.label)}
+              >
+                <div className="service-option-icon">
+                  <Icon size={20} />
+                </div>
+                <div className="service-option-text">
+                  <strong>{opt.label}</strong>
+                  <span>{opt.desc}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </Dialog>
   );
 }

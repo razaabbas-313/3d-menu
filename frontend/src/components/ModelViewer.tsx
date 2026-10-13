@@ -4,6 +4,7 @@ import { Loader2, RotateCcw, ZoomIn, ZoomOut, Play, Pause } from 'lucide-react';
 export type ModelViewerHandle = {
   activateAR: () => void;
   resetCamera: () => void;
+  setCameraOrbit?: (orbit: string) => void;
   readonly canActivateAR: boolean;
 };
 
@@ -17,6 +18,8 @@ type Props = {
   autoRotate?: boolean;
   scale?: number | null;
   placement?: PlatePlacement | string | null;
+  exposure?: number | string;
+  environmentImage?: string;
   showControls?: boolean;
   onLoad?: () => void;
   onError?: () => void;
@@ -50,6 +53,8 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
     autoRotate: initialAutoRotate = true,
     scale = 1.0,
     placement = 'plate',
+    exposure = '1.05',
+    environmentImage = 'neutral',
     showControls = true,
     onLoad,
     onError,
@@ -79,15 +84,23 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
   const resetCamera = () => {
     const node = el.current;
     if (!node) return;
-    node.setAttribute('camera-orbit', '0deg 75deg 105%');
+    node.setAttribute('camera-orbit', '0deg 70deg 105%');
     node.setAttribute('camera-target', 'auto auto auto');
-    node.setAttribute('field-of-view', '32deg');
+    node.setAttribute('field-of-view', '30deg');
+    node.jumpCameraToGoal?.();
+  };
+
+  const setCameraOrbit = (orbit: string) => {
+    const node = el.current;
+    if (!node) return;
+    node.setAttribute('camera-orbit', orbit);
     node.jumpCameraToGoal?.();
   };
 
   useImperativeHandle(handle, () => ({
     activateAR: () => el.current?.activateAR?.(),
     resetCamera,
+    setCameraOrbit,
     get canActivateAR() {
       return Boolean(el.current?.canActivateAR);
     }
@@ -126,18 +139,17 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
     src,
     alt,
     'camera-controls': '',
-    'touch-action': 'pan-y',
-    'shadow-intensity': '1.3',
-    'shadow-softness': '0.7',
-    exposure: '1.08',
-    'environment-image': 'neutral',
+    'touch-action': 'none',
+    'shadow-intensity': '1.8',
+    'shadow-softness': '0.45',
+    exposure: String(exposure),
+    'environment-image': environmentImage,
     'interaction-prompt': 'none',
-    'auto-rotate-delay': '1000',
+    'auto-rotate-delay': '1200',
+    'interpolation-decay': '200',
     bounds: 'tight',
-    'camera-orbit': '0deg 75deg 105%',
-    'min-camera-orbit': 'auto auto 40%',
-    'max-camera-orbit': 'auto auto 220%',
-    'field-of-view': '32deg',
+    'camera-orbit': '0deg 70deg 105%',
+    'field-of-view': '30deg',
     scale: `${numericScale} ${numericScale} ${numericScale}`
   };
 
@@ -152,8 +164,8 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
   const zoom = (direction: 'in' | 'out') => {
     const node = el.current;
     if (!node) return;
-    const currentFov = parseFloat(node.getAttribute('field-of-view') || '32deg');
-    const newFov = direction === 'in' ? Math.max(16, currentFov - 6) : Math.min(50, currentFov + 6);
+    const currentFov = parseFloat(node.getAttribute('field-of-view') || '30deg');
+    const newFov = direction === 'in' ? Math.max(16, currentFov - 5) : Math.min(46, currentFov + 5);
     node.setAttribute('field-of-view', `${newFov}deg`);
   };
 

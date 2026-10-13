@@ -55,7 +55,12 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             </span>
           </Field>
           {error && <p className="form-error" role="alert">{error}</p>}
-          <Button variant="primary" type="submit" loading={busy} className="wide">{register ? 'Create account' : 'Sign in'}</Button>
+          <Button variant="primary" type="submit" loading={busy} className="wide">{register ? 'Start free 14-day trial' : 'Sign in to dashboard'}</Button>
+          {register && (
+            <p className="field-hint" style={{ textAlign: 'center', fontSize: '12px' }}>
+              No credit card required · Free 3D model trial included
+            </p>
+          )}
           <p className="a-switch">
             {register ? <>Already have an account? <Link to="/login">Sign in</Link></> : <>New to Atelier AR? <Link to="/register">Create an account</Link></>}
           </p>
@@ -63,7 +68,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       </div>
       <div className="a-art" aria-hidden>
         <div className="turntable"><div className="plate"><i /></div></div>
-        <p>Guests rotate your dishes, then place them on their table.</p>
+        <p>Give your diners the 3D augmented reality menu experience they remember.</p>
       </div>
     </div>
   );
