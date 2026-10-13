@@ -18,7 +18,7 @@ import { QrCode } from '../../components/QrCode';
 import { PageHeader } from './Shell';
 import { useMenu } from './menuStore';
 
-const MAX_BYTES = 25 * 1024 * 1024;
+const MAX_BYTES = 50 * 1024 * 1024;
 
 type FilterType = 'all' | '3d' | 'photo';
 
@@ -119,7 +119,7 @@ export function Studio() {
     }
     if (file.size > MAX_BYTES) {
       toast.error(
-        `That file is ${(file.size / 1048576).toFixed(1)} MB. The limit is 25 MB. Optimize textures and try again.`
+        `That file is ${(file.size / 1048576).toFixed(1)} MB. The limit is 50 MB. Optimize textures and try again.`
       );
       return;
     }
@@ -391,7 +391,7 @@ export function Studio() {
                 <Button variant="primary" onClick={() => input.current?.click()} disabled={uploading}>
                   Choose .glb file
                 </Button>
-                <small>GLB (glTF binary) up to 25 MB</small>
+                <small>GLB (glTF binary) up to 50 MB</small>
               </div>
             )}
           </section>

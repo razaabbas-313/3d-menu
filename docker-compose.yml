@@ -23,6 +23,7 @@ services:
       DB_USERNAME: atelier
       DB_PASSWORD: ${DB_PASSWORD:-atelier-dev-password}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a long random string}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:*,https://*}
     volumes: [uploads:/data/uploads]
 
   web:

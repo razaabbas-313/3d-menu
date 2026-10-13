@@ -45,7 +45,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     ResponseEntity<Map<String, String>> tooLarge(MaxUploadSizeExceededException ex) {
-        return body(HttpStatus.PAYLOAD_TOO_LARGE, "That file is too large. Models can be up to 25 MB.");
+        return body(HttpStatus.PAYLOAD_TOO_LARGE, "That file is too large. Models can be up to 50 MB.");
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
