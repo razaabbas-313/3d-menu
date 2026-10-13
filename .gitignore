@@ -1,0 +1,11 @@
+node_modules/
+dist/
+target/
+.env
+*.log
+.DS_Store
+.idea/
+.vscode/
+backend/data/
+backend/uploads/
+frontend/mock-api/.uploads/

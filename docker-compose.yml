@@ -1,0 +1,35 @@
+# Production-style stack: PostgreSQL + Spring Boot API + nginx serving the React app.
+#   JWT_SECRET=$(openssl rand -hex 32) docker compose up --build
+# Then open http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: atelier_ar
+      POSTGRES_USER: atelier
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-atelier-dev-password}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atelier -d atelier_ar"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/atelier_ar
+      DB_USERNAME: atelier
+      DB_PASSWORD: ${DB_PASSWORD:-atelier-dev-password}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a long random string}
+    volumes: [uploads:/data/uploads]
+
+  web:
+    build: ./frontend
+    depends_on: [backend]
+    ports: ["3000:80"]
+
+volumes:
+  pgdata:
+  uploads:
