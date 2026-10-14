@@ -547,10 +547,11 @@
   gap: 14px;
   overflow-x: auto;
   margin: 0 -16px;
-  padding: 4px 16px 12px;
-  scroll-snap-type: x proximity;
+  padding: 4px 16px 16px;
+  scroll-snap-type: x mandatory;
   scroll-padding-left: 16px;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .g-rail::-webkit-scrollbar {
   display: none;
@@ -558,27 +559,28 @@
 
 .g-feature-card {
   flex: none;
-  width: 210px;
+  width: clamp(260px, 80vw, 320px);
   display: flex;
   flex-direction: column;
-  background: #121722;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
+  background: #111622;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
   overflow: hidden;
   cursor: pointer;
   scroll-snap-align: start;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
   transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .g-feature-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.7);
 }
 
 .g-feature-img {
   position: relative;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
   background: #1a2232;
 }
@@ -594,47 +596,50 @@
   transform: scale(1.04);
 }
 
-.g-card-price {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  background: rgba(9, 12, 19, 0.85);
-  backdrop-filter: blur(6px);
-  padding: 3px 8px;
-  border-radius: 8px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
 .g-feature-info {
-  padding: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
 }
 
-.g-feature-info strong {
-  font-size: 15px;
+.g-feature-name {
+  font-size: 16.5px;
   font-weight: 700;
+  color: #f8fafc;
   line-height: 1.25;
 }
 
-.g-feature-info p {
-  font-size: 12.5px;
+.g-feature-desc {
+  font-size: 13px;
   color: #94a3b8;
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.4;
 }
 
-.g-card-actions {
+.g-feature-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-top: auto;
-  padding-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.g-feature-price {
+  font-size: 17px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.g-feature-order-ctrl {
+  flex: none;
 }
 
 .btn-add-quick {
@@ -645,8 +650,8 @@
   padding: 0 10px;
   border-radius: 99px;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  background: #1a2334;
-  color: #e2e8f0;
+  background: #1c2538;
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -741,28 +746,36 @@
 .g-row {
   width: 100%;
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 10px;
   text-align: left;
-  padding: 12px 14px;
-  background: #121722;
+  padding: 14px;
+  background: #111622;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
   box-sizing: border-box;
 }
 
 .g-row:hover {
-  background: #171d2b;
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.5);
+  background: #161c2b;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5);
 }
 
 .g-row.sold {
   opacity: 0.55;
+}
+
+.g-row-main {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .g-row-text {
@@ -776,7 +789,7 @@
 .g-row-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -784,6 +797,7 @@
   font-size: 16px;
   font-weight: 700;
   color: #f8fafc;
+  line-height: 1.25;
 }
 
 .g-desc {
@@ -797,48 +811,73 @@
   line-height: 1.4;
 }
 
+.g-row-img-wrap {
+  position: relative;
+  flex: none;
+  width: 92px;
+  height: 92px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #1a2232;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.g-row-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.g-row-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  width: 100%;
+}
+
 .g-meta {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   align-items: center;
-  margin-top: 2px;
 }
 
 .g-price {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: #f1f5f9;
-  margin-right: 4px;
 }
 
 .g-diet-tag {
   display: inline-block;
-  padding: 1px 7px;
+  padding: 2px 8px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 11px;
   color: #94a3b8;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .g-row-order-ctrl {
-  margin-top: 4px;
+  flex: none;
 }
 
 .btn-add-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 28px;
-  padding: 0 10px;
+  height: 32px;
+  padding: 0 14px;
   border-radius: 99px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #1b2333;
-  color: #cbd5e1;
-  font-size: 12px;
-  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1c2538;
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -859,14 +898,14 @@
   align-items: center;
   gap: 4px;
   background: #1c2538;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 99px;
   padding: 2px 4px;
 }
 
 .counter-btn {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 0;
   background: #27334d;
@@ -889,56 +928,37 @@
   color: #f8fafc;
 }
 
-.g-row-img-wrap {
-  position: relative;
-  flex: none;
-  width: 96px;
-  height: 96px;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #1a2232;
-}
-
-.g-row-img-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
 @media (max-width: 480px) {
   .g-row {
-    padding: 10px 12px;
-    gap: 10px;
+    padding: 12px;
+    gap: 8px;
     border-radius: 16px;
   }
+  .g-row-main {
+    gap: 10px;
+  }
   .g-row-img-wrap {
-    width: 80px;
-    height: 80px;
-    min-width: 80px;
-    min-height: 80px;
+    width: 82px;
+    height: 82px;
     border-radius: 12px;
-    align-self: flex-start;
   }
   .g-row-title strong {
     font-size: 15px;
-    line-height: 1.25;
   }
   .g-desc {
-    font-size: 12px;
-    line-height: 1.35;
+    font-size: 12.5px;
   }
   .g-price {
-    font-size: 14.5px;
+    font-size: 15px;
   }
   .btn-add-pill {
-    height: 28px;
-    padding: 0 10px;
-    font-size: 11.5px;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
   }
   .counter-btn {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
+    width: 30px;
+    height: 30px;
   }
   .floating-bottom-bar,
   .floating-order-bar {
@@ -1158,45 +1178,129 @@
   background: #334260;
 }
 
-/* ---------- Dish Sheet (Dark Theme Modal) ---------- */
+/* ---------- Dish Sheet (Dark Theme Modal & Mobile Bottom Sheet) ---------- */
+dialog.dialog-sheet {
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  border: none !important;
+}
+
 .sheet-dark {
-  position: relative;
-  background: #0d121c;
+  display: flex;
+  flex-direction: column;
+  height: min(92dvh, 800px);
+  max-height: 92dvh;
+  background: #0b0f18;
   color: #f1f5f9;
   border-top-left-radius: 24px;
   border-top-right-radius: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.75);
 }
 
-.sheet-dark .sheet-close {
+@media (min-width: 760px) {
+  .sheet-dark {
+    border-radius: 24px;
+    height: min(85dvh, 720px);
+  }
+}
+
+.sheet-top-nav {
+  position: relative;
+  z-index: 40;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  background: rgba(11, 15, 24, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex: none;
+}
+
+.sheet-drag-pill {
+  width: 40px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sheet-close-pill {
   position: absolute;
-  z-index: 20;
-  top: 14px;
-  right: 14px;
-  width: 36px;
-  height: 36px;
+  right: 12px;
+  top: 7px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 0;
-  background: rgba(13, 18, 28, 0.75);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
   color: #f8fafc;
   display: grid;
   place-items: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: background 0.15s;
+  transition: all 0.15s;
 }
 
-.sheet-dark .sheet-close:hover {
+.sheet-close-pill:hover {
   background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.sheet-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
 }
 
 .stage-guest {
   border-radius: 0;
   aspect-ratio: auto;
-  height: clamp(230px, 36dvh, 320px);
+  height: clamp(230px, 35dvh, 320px);
   width: 100%;
-  background: radial-gradient(circle at 50% 30%, #1a2233 0%, #0d121c 85%);
+  background: radial-gradient(circle at 50% 30%, #172133 0%, #0b0f18 85%);
   position: relative;
+  flex: none;
+  overflow: hidden;
+}
+
+.stage-photo-full {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.stage-photo-full img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stage-3d-tag {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(11, 15, 24, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f1f5f9;
+  font-size: 11.5px;
+  font-weight: 600;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 /* ---------- 3D Plating Surface Switcher ---------- */
@@ -1209,6 +1313,7 @@
   background: rgba(13, 18, 28, 0.95);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   overflow-x: auto;
+  flex: none;
 }
 
 .plating-label {
@@ -1263,25 +1368,25 @@
 }
 
 .sheet-body {
-  padding: 18px 20px calc(28px + env(safe-area-inset-bottom));
+  padding: 18px 20px 24px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 @media (max-width: 480px) {
   .sheet-body {
-    padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
-    gap: 10px;
+    padding: 14px 16px 20px;
+    gap: 12px;
   }
   .sheet-title h2 {
-    font-size: 22px;
+    font-size: 21px;
   }
   .sheet-price {
-    font-size: 19px;
+    font-size: 18px;
   }
   .btn-sheet-order {
-    height: 46px;
-    font-size: 14.5px;
+    height: 48px;
+    font-size: 15px;
   }
   .sheet-ar {
     height: 46px;
@@ -1297,14 +1402,15 @@
 }
 
 .sheet-title h2 {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.02em;
   margin: 0;
+  color: #f8fafc;
 }
 
 .sheet-price {
-  font-size: 22px;
+  font-size: 20px;
   white-space: nowrap;
   font-weight: 800;
   color: #f1f5f9;
@@ -1318,20 +1424,28 @@
 
 .sheet-desc {
   color: #94a3b8;
-  font-size: 14.5px;
+  font-size: 14px;
   line-height: 1.5;
   margin: 0;
 }
 
-.sheet-order-row {
-  margin-top: 4px;
+.sheet-sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(11, 15, 24, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex: none;
 }
 
 .btn-sheet-order {
   width: 100%;
-  height: 48px;
+  height: 50px;
   border-radius: 14px;
-  font-size: 15px;
+  font-size: 15.5px;
   font-weight: 700;
 }
 

@@ -636,97 +636,34 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
               <span className="g-featured-sub">Most loved highlights</span>
             </div>
             <div className="g-rail">
-              {featured.map((i) => (
-                <div
-                  key={i.id}
-                  className="g-feature-card"
-                  onClick={() => open(i)}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${i.name}, ${money(i.price, cur)}`}
-                >
-                  <div className="g-feature-img">
-                    <Photo src={assetUrl(i.imageUrl)} alt={i.name} />
-                    {i.modelUrl ? (
-                      <span className="badge-3d badge-3d-glow">
-                        <Box size={12} />
-                        <span>3D & AR</span>
-                      </span>
-                    ) : (
-                      <span className="badge-signature">Signature</span>
-                    )}
-                    <span className="g-card-price">{money(i.price, cur)}</span>
-                  </div>
-                  <div className="g-feature-info">
-                    <strong>{i.name}</strong>
-                    {i.description && <p>{i.description}</p>}
-                    <div className="g-card-actions">
-                      <button
-                        type="button"
-                        className="btn-add-quick"
-                        onClick={(e) => addToOrder(i, e)}
-                        title="Add to table order"
-                      >
-                        <Plus size={14} />
-                        <span>Add</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Categorized Sections */}
-        {groups.map((g) => (
-          <section key={g.name} data-cat={g.name} className="g-section">
-            <div className="g-section-head">
-              <h2>{g.name}</h2>
-              <span className="g-section-count">{g.items.length} dishes</span>
-            </div>
-            <ul className="g-dish-list">
-              {g.items.map((i, idx) => {
+              {featured.map((i) => {
                 const inOrder = order[i.id];
-                const isPopular = i.featured || idx === 0;
                 return (
-                  <li key={i.id}>
-                    <div
-                      className={`g-row ${i.available ? '' : 'sold'}`}
-                      onClick={() => open(i)}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <div className="g-row-text">
-                        <div className="g-row-title">
-                          <strong>{i.name}</strong>
-                          {i.modelUrl && (
-                            <span className="badge-3d-inline">
-                              <Box size={11} />
-                              3D
-                            </span>
-                          )}
-                          {isPopular && i.available && (
-                            <span className="badge-hot-tag">
-                              <Flame size={10} /> Popular
-                            </span>
-                          )}
-                        </div>
-                        {i.description && <p className="g-desc">{i.description}</p>}
-                        <div className="g-meta">
-                          <b className="g-price">{money(i.price, cur)}</b>
-                          {!i.available && <Chip tone="chili">Sold out</Chip>}
-                          {parseTags(i.tags)
-                            .slice(0, 3)
-                            .map((t) => (
-                              <span key={t} className="g-diet-tag">
-                                {t}
-                              </span>
-                            ))}
-                        </div>
-
-                        {/* Order Add Button with Feedback */}
-                        <div className="g-row-order-ctrl" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    key={i.id}
+                    className="g-feature-card"
+                    onClick={() => open(i)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${i.name}, ${money(i.price, cur)}`}
+                  >
+                    <div className="g-feature-img">
+                      <Photo src={assetUrl(i.imageUrl)} alt={i.name} />
+                      {i.modelUrl ? (
+                        <span className="badge-3d badge-3d-glow">
+                          <Box size={12} />
+                          <span>3D & AR</span>
+                        </span>
+                      ) : (
+                        <span className="badge-signature">Signature</span>
+                      )}
+                    </div>
+                    <div className="g-feature-info">
+                      <strong className="g-feature-name">{i.name}</strong>
+                      {i.description && <p className="g-feature-desc">{i.description}</p>}
+                      <div className="g-feature-foot" onClick={(e) => e.stopPropagation()}>
+                        <b className="g-feature-price">{money(i.price, cur)}</b>
+                        <div className="g-feature-order-ctrl">
                           {inOrder ? (
                             <div className="order-counter">
                               <button
@@ -755,20 +692,112 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                               disabled={!i.available}
                             >
                               <Plus size={14} />
-                              <span>Add to order</span>
+                              <span>Add</span>
                             </button>
                           )}
                         </div>
                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
-                      <div className="g-row-img-wrap">
-                        <Photo src={assetUrl(i.imageUrl)} alt={i.name} />
-                        {i.modelUrl && (
-                          <span className="badge-3d badge-3d-corner">
-                            <Box size={11} />
-                            3D
-                          </span>
-                        )}
+        {/* Categorized Sections */}
+        {groups.map((g) => (
+          <section key={g.name} data-cat={g.name} className="g-section">
+            <div className="g-section-head">
+              <h2>{g.name}</h2>
+              <span className="g-section-count">{g.items.length} dishes</span>
+            </div>
+            <ul className="g-dish-list">
+              {g.items.map((i, idx) => {
+                const inOrder = order[i.id];
+                const isPopular = i.featured || idx === 0;
+                return (
+                  <li key={i.id}>
+                    <div
+                      className={`g-row ${i.available ? '' : 'sold'}`}
+                      onClick={() => open(i)}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="g-row-main">
+                        <div className="g-row-text">
+                          <div className="g-row-title">
+                            <strong>{i.name}</strong>
+                            {i.modelUrl && (
+                              <span className="badge-3d-inline">
+                                <Box size={11} /> 3D
+                              </span>
+                            )}
+                            {isPopular && i.available && (
+                              <span className="badge-hot-tag">
+                                <Flame size={10} /> Popular
+                              </span>
+                            )}
+                          </div>
+                          {i.description && <p className="g-desc">{i.description}</p>}
+                        </div>
+
+                        <div className="g-row-img-wrap">
+                          <Photo src={assetUrl(i.imageUrl)} alt={i.name} />
+                          {i.modelUrl && (
+                            <span className="badge-3d badge-3d-corner">
+                              <Box size={11} /> 3D
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="g-row-bottom" onClick={(e) => e.stopPropagation()}>
+                        <div className="g-meta">
+                          <b className="g-price">{money(i.price, cur)}</b>
+                          {!i.available && <Chip tone="chili">Sold out</Chip>}
+                          {parseTags(i.tags)
+                            .slice(0, 3)
+                            .map((t) => (
+                              <span key={t} className="g-diet-tag">
+                                {t}
+                              </span>
+                            ))}
+                        </div>
+
+                        <div className="g-row-order-ctrl">
+                          {inOrder ? (
+                            <div className="order-counter">
+                              <button
+                                type="button"
+                                className="counter-btn"
+                                onClick={() => updateCount(i.id, -1)}
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus size={13} />
+                              </button>
+                              <span className="counter-val">{inOrder.count}</span>
+                              <button
+                                type="button"
+                                className="counter-btn"
+                                onClick={() => updateCount(i.id, 1)}
+                                aria-label="Increase quantity"
+                              >
+                                <Plus size={13} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-add-pill"
+                              onClick={(e) => addToOrder(i, e)}
+                              disabled={!i.available}
+                            >
+                              <Plus size={14} />
+                              <span>Add</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </li>
@@ -1228,154 +1257,166 @@ function DishSheet({
     <Dialog open={Boolean(item)} onClose={onClose} variant="sheet" label={shown?.name ?? 'Dish'}>
       {shown && (
         <div className="sheet sheet-dark">
-          <button className="sheet-close" onClick={onClose} aria-label="Close modal">
-            <X size={18} />
-          </button>
-
-          {/* 3D Staged Dish Container */}
-          <div className="stage stage-guest">
-            {shown.modelUrl ? (
-              <ModelViewer
-                ref={viewer}
-                className="stage-model"
-                src={assetUrl(shown.modelUrl)!}
-                alt={`3D model of ${shown.name}`}
-                scale={shown.modelScale ?? 1.0}
-                placement={activePlacement}
-                showControls={true}
-                onLoad={() => onModelView(shown.id)}
-              />
-            ) : (
-              <div className="stage-photo">
-                <Photo src={assetUrl(shown.imageUrl)} alt={shown.name} />
-              </div>
-            )}
+          {/* Sticky Header with Drag Handle & Close Button */}
+          <div className="sheet-top-nav">
+            <div className="sheet-drag-pill" aria-hidden="true" />
+            <button className="sheet-close-pill" onClick={onClose} aria-label="Close modal">
+              <X size={18} />
+            </button>
           </div>
 
-          {/* Interactive Plating Surface Switcher for 3D Dishes */}
-          {shown.modelUrl && (
-            <div className="sheet-plating-bar">
-              <span className="plating-label">Plate surface:</span>
-              <div className="plating-pills">
-                <button
-                  type="button"
-                  className={`plating-pill ${activePlacement === 'plate' ? 'on' : ''}`}
-                  onClick={() => setActivePlacement('plate')}
-                >
-                  🍽️ Ceramic
-                </button>
-                <button
-                  type="button"
-                  className={`plating-pill ${activePlacement === 'slate' ? 'on' : ''}`}
-                  onClick={() => setActivePlacement('slate')}
-                >
-                  🪨 Slate
-                </button>
-                <button
-                  type="button"
-                  className={`plating-pill ${activePlacement === 'marble' ? 'on' : ''}`}
-                  onClick={() => setActivePlacement('marble')}
-                >
-                  🏛️ Marble
-                </button>
-                <button
-                  type="button"
-                  className={`plating-pill ${activePlacement === 'wood' ? 'on' : ''}`}
-                  onClick={() => setActivePlacement('wood')}
-                >
-                  🪵 Wood
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Dish Information & Action Details */}
-          <div className="sheet-body">
-            <div className="sheet-title">
-              <h2>{shown.name}</h2>
-              <b className="sheet-price">{money(shown.price, currency)}</b>
-            </div>
-
-            <div className="sheet-tags">
-              {!shown.available && <Chip tone="chili">Sold out</Chip>}
-              {parseTags(shown.tags).map((t) => (
-                <span key={t} className="g-diet-tag">
-                  {t}
-                </span>
-              ))}
-            </div>
-
-            {shown.description && <p className="sheet-desc">{shown.description}</p>}
-
-            {/* Quick Add to Table Order */}
-            <div className="sheet-order-row">
-              <Button
-                variant="primary"
-                size="md"
-                className="btn-sheet-order"
-                icon={<ShoppingBag size={18} />}
-                disabled={!shown.available}
-                onClick={() => {
-                  onAddToOrder(shown);
-                  onClose();
-                }}
-              >
-                Add to Table Order · {money(shown.price, currency)}
-              </Button>
-            </div>
-
-            {/* Smart Sommelier / Chef Pairing Cross-Sell Widget */}
-            {pairing && (
-              <div className="sheet-pairing-card">
-                <div className="pairing-card-head">
-                  <Wine size={15} />
-                  <span>Chef's Recommended Pairing</span>
+          {/* Scrollable Container */}
+          <div className="sheet-scrollable-content">
+            {/* 3D Staged Dish Container or Full Hero Photo */}
+            <div className="stage stage-guest">
+              {shown.modelUrl ? (
+                <>
+                  <ModelViewer
+                    ref={viewer}
+                    className="stage-model"
+                    src={assetUrl(shown.modelUrl)!}
+                    alt={`3D model of ${shown.name}`}
+                    scale={shown.modelScale ?? 1.0}
+                    placement={activePlacement}
+                    showControls={true}
+                    onLoad={() => onModelView(shown.id)}
+                  />
+                  <div className="stage-3d-tag">
+                    <Box size={12} />
+                    <span>Drag 360° to rotate</span>
+                  </div>
+                </>
+              ) : (
+                <div className="stage-photo-full">
+                  <Photo src={assetUrl(shown.imageUrl)} alt={shown.name} />
                 </div>
-                <div className="pairing-card-body">
-                  <div className="pairing-card-img">
-                    <Photo src={assetUrl(pairing.imageUrl)} alt={pairing.name} />
-                  </div>
-                  <div className="pairing-card-info">
-                    <strong>{pairing.name}</strong>
-                    <span>+{money(pairing.price, currency)}</span>
-                  </div>
+              )}
+            </div>
+
+            {/* Interactive Plating Surface Switcher for 3D Dishes */}
+            {shown.modelUrl && (
+              <div className="sheet-plating-bar">
+                <span className="plating-label">Plate surface:</span>
+                <div className="plating-pills">
                   <button
                     type="button"
-                    className="btn-add-pairing"
-                    onClick={() => {
-                      onAddToOrder(pairing);
-                    }}
+                    className={`plating-pill ${activePlacement === 'plate' ? 'on' : ''}`}
+                    onClick={() => setActivePlacement('plate')}
                   >
-                    <Plus size={13} /> Add Pairing
+                    🍽️ Ceramic
+                  </button>
+                  <button
+                    type="button"
+                    className={`plating-pill ${activePlacement === 'slate' ? 'on' : ''}`}
+                    onClick={() => setActivePlacement('slate')}
+                  >
+                    🪨 Slate
+                  </button>
+                  <button
+                    type="button"
+                    className={`plating-pill ${activePlacement === 'marble' ? 'on' : ''}`}
+                    onClick={() => setActivePlacement('marble')}
+                  >
+                    🏛️ Marble
+                  </button>
+                  <button
+                    type="button"
+                    className={`plating-pill ${activePlacement === 'wood' ? 'on' : ''}`}
+                    onClick={() => setActivePlacement('wood')}
+                  >
+                    🪵 Wood
                   </button>
                 </div>
               </div>
             )}
 
-            {/* AR Button */}
-            {shown.modelUrl ? (
-              <div className="sheet-ar-wrap">
-                <Button
-                  variant="accent"
-                  className="sheet-ar"
-                  icon={<Smartphone size={18} />}
-                  onClick={() => {
-                    onAr(shown.id);
-                    if (viewer.current?.canActivateAR) viewer.current.activateAR();
-                    else setArHint(true);
-                  }}
-                >
-                  View on your table (AR)
-                </Button>
-                <p className="sheet-hint" role={arHint ? 'alert' : undefined}>
-                  {arHint
-                    ? 'AR requires a mobile browser with WebXR or AR Quick Look (iOS/Android).'
-                    : 'Pinch to zoom · Drag with finger to rotate 360°'}
-                </p>
+            {/* Dish Information & Action Details */}
+            <div className="sheet-body">
+              <div className="sheet-title">
+                <h2>{shown.name}</h2>
+                <b className="sheet-price">{money(shown.price, currency)}</b>
               </div>
-            ) : (
-              <p className="sheet-hint">A photorealistic 3D presentation of this dish will be plated soon.</p>
-            )}
+
+              <div className="sheet-tags">
+                {!shown.available && <Chip tone="chili">Sold out</Chip>}
+                {parseTags(shown.tags).map((t) => (
+                  <span key={t} className="g-diet-tag">
+                    {t}
+                  </span>
+                ))}
+              </div>
+
+              {shown.description && <p className="sheet-desc">{shown.description}</p>}
+
+              {/* AR Button */}
+              {shown.modelUrl ? (
+                <div className="sheet-ar-wrap">
+                  <Button
+                    variant="accent"
+                    className="sheet-ar"
+                    icon={<Smartphone size={18} />}
+                    onClick={() => {
+                      onAr(shown.id);
+                      if (viewer.current?.canActivateAR) viewer.current.activateAR();
+                      else setArHint(true);
+                    }}
+                  >
+                    View on your table (AR)
+                  </Button>
+                  <p className="sheet-hint" role={arHint ? 'alert' : undefined}>
+                    {arHint
+                      ? 'AR requires a mobile browser with WebXR or AR Quick Look (iOS/Android).'
+                      : 'Pinch to zoom · Drag with finger to rotate 360°'}
+                  </p>
+                </div>
+              ) : (
+                <p className="sheet-hint">A photorealistic 3D presentation of this dish will be plated soon.</p>
+              )}
+
+              {/* Smart Sommelier / Chef Pairing Cross-Sell Widget */}
+              {pairing && (
+                <div className="sheet-pairing-card">
+                  <div className="pairing-card-head">
+                    <Wine size={15} />
+                    <span>Chef's Recommended Pairing</span>
+                  </div>
+                  <div className="pairing-card-body">
+                    <div className="pairing-card-img">
+                      <Photo src={assetUrl(pairing.imageUrl)} alt={pairing.name} />
+                    </div>
+                    <div className="pairing-card-info">
+                      <strong>{pairing.name}</strong>
+                      <span>+{money(pairing.price, currency)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-add-pairing"
+                      onClick={() => {
+                        onAddToOrder(pairing);
+                      }}
+                    >
+                      <Plus size={13} /> Add Pairing
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sticky Bottom Ordering Action Bar */}
+          <div className="sheet-sticky-footer">
+            <Button
+              variant="primary"
+              className="btn-sheet-order"
+              icon={<ShoppingBag size={18} />}
+              disabled={!shown.available}
+              onClick={() => {
+                onAddToOrder(shown);
+                onClose();
+              }}
+            >
+              Add to Table Order · {money(shown.price, currency)}
+            </Button>
           </div>
         </div>
       )}
