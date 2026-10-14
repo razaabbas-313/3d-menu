@@ -139,7 +139,7 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
     src,
     alt,
     'camera-controls': '',
-    'touch-action': 'none',
+    'touch-action': 'pan-y',
     'shadow-intensity': '1.8',
     'shadow-softness': '0.45',
     exposure: String(exposure),

@@ -18,11 +18,67 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--cobalt) 65%, white); outline-offset: 2px; border-radius: 6px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; } }
 
-/* Scrollbars */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--porcelain); }
-::-webkit-scrollbar-thumb { background: #1e2638; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #2b364e; }
+/* ==========================================================================
+   Luxury Trackless Obsidian Scrollbars (No default bulky OS scrollbars)
+   ========================================================================== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+  transition: background 0.15s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Hide scrollbars completely on horizontal touch strips */
+.no-scrollbar,
+.cat-tabs,
+.g-rail,
+.g-tabs,
+.g-filter-bar,
+.g-social-bar,
+.clean-scale-presets,
+.studio-clean-filter-pills,
+.swatches,
+.plating-pills {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.cat-tabs::-webkit-scrollbar,
+.g-rail::-webkit-scrollbar,
+.g-tabs::-webkit-scrollbar,
+.g-filter-bar::-webkit-scrollbar,
+.g-social-bar::-webkit-scrollbar,
+.clean-scale-presets::-webkit-scrollbar,
+.studio-clean-filter-pills::-webkit-scrollbar,
+.swatches::-webkit-scrollbar,
+.plating-pills::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
 
 /* ---------- buttons ---------- */
 .btn {
@@ -70,10 +126,133 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .input:focus { outline: none; border-color: var(--cobalt); box-shadow: 0 0 0 3px var(--cobalt-tint); }
 .input[readonly] { background: #0c101a; color: var(--slate); }
 .textarea { height: auto; padding: 10px 12px; resize: vertical; line-height: 1.45; }
-.select {
-  appearance: none; padding-right: 34px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 12px center;
+
+/* ---------- Custom Luxury Select Dropdown ---------- */
+.c-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.c-select-trigger {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--glaze-raised);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  text-align: left;
+}
+
+.c-select-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: #171f2f;
+}
+
+.c-select-wrap.is-open .c-select-trigger {
+  border-color: var(--cobalt);
+  box-shadow: 0 0 0 3px var(--cobalt-tint);
+}
+
+.c-select-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.c-select-placeholder {
+  color: var(--slate-subtle);
+  font-weight: 500;
+}
+
+.c-select-chevron {
+  color: var(--slate);
+  flex: none;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.c-select-chevron.rotated {
+  transform: rotate(180deg);
+  color: #60a5fa;
+}
+
+.c-select-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: #101624;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--r-md);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: pop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.c-select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  color: var(--slate);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.c-select-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.c-select-option.selected {
+  background: rgba(59, 130, 246, 0.16);
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.c-select-opt-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-select-check {
+  color: #60a5fa;
+  flex: none;
+}
+
+.c-select-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--slate);
+  font-weight: 600;
 }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }

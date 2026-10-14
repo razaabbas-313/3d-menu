@@ -43,21 +43,48 @@
     #0d111a;
   background-size: cover, auto, auto;
   background-position: center;
-  min-height: 280px;
+  min-height: 240px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   color: #fff;
-  padding: 16px 16px 24px;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 20px;
 }
 
 .g-hero-top-actions {
   position: absolute;
-  top: 14px;
+  top: calc(14px + env(safe-area-inset-top));
   right: 14px;
   display: flex;
   gap: 8px;
   z-index: 5;
+}
+
+@media (max-width: 520px) {
+  .g-hero {
+    min-height: auto;
+    padding: calc(12px + env(safe-area-inset-top)) 14px 16px;
+  }
+  .g-hero-top-actions {
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+    gap: 6px;
+  }
+  .g-action-pill {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 11.5px;
+    gap: 4px;
+  }
+  .g-name {
+    font-size: clamp(26px, 7.5vw, 40px);
+    word-break: break-word;
+  }
+  .g-tagline {
+    font-size: 13.5px;
+  }
 }
 
 .g-action-pill {
@@ -113,7 +140,7 @@
   display: inline-flex;
   gap: 5px;
   align-items: center;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 99px;
@@ -123,7 +150,7 @@
 }
 
 .g-name {
-  font-size: clamp(34px, 8vw, 54px);
+  font-size: clamp(30px, 7.5vw, 52px);
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.05;
@@ -133,7 +160,7 @@
 
 .g-tagline {
   color: #cbd5e1;
-  font-size: 15px;
+  font-size: 14.5px;
   max-width: 48ch;
   line-height: 1.45;
   margin: 0;
@@ -142,12 +169,21 @@
 /* ---------- Free Marketing & Social Bar ---------- */
 .g-social-bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   margin-top: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.g-social-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .g-social-pill {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -162,6 +198,7 @@
   font-weight: 600;
   text-decoration: none;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .g-social-pill:hover {
@@ -191,7 +228,7 @@
   position: sticky;
   top: 0;
   z-index: 25;
-  background: rgba(9, 12, 19, 0.9);
+  background: rgba(9, 12, 19, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
@@ -202,26 +239,26 @@
   position: relative;
   width: min(720px, 100%);
   margin: 0 auto;
-  padding: 10px 16px 6px;
+  padding: 8px 16px 4px;
 }
 
 .g-search svg {
   position: absolute;
   left: 28px;
-  top: 21px;
+  top: 18px;
   color: #64748b;
   pointer-events: none;
 }
 
 .g-search input {
   width: 100%;
-  height: 42px;
-  padding: 0 36px 0 38px;
+  height: 38px;
+  padding: 0 34px 0 38px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 99px;
   background: #121722;
   color: #f1f5f9;
-  font-size: 14px;
+  font-size: 13.5px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -238,7 +275,7 @@
 .g-search-clear {
   position: absolute;
   right: 28px;
-  top: 21px;
+  top: 18px;
   background: none;
   border: 0;
   color: #94a3b8;
@@ -251,12 +288,13 @@
 /* Filter Chips (3D, Specials, Dietary) */
 .g-filter-bar {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   overflow-x: auto;
-  padding: 2px 16px 8px;
+  padding: 2px 16px 6px;
   width: min(720px, 100%);
   margin: 0 auto;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .g-filter-bar::-webkit-scrollbar {
   display: none;
@@ -266,17 +304,18 @@
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  height: 30px;
-  padding: 0 12px;
+  gap: 4px;
+  height: 28px;
+  padding: 0 11px;
   border-radius: 99px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #141a26;
   color: #94a3b8;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 
 .g-filter-chip:hover {
@@ -305,12 +344,13 @@
 /* Category Tabs */
 .g-tabs {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   overflow-x: auto;
-  padding: 2px 16px 10px;
+  padding: 2px 16px 8px;
   width: min(720px, 100%);
   margin: 0 auto;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .g-tabs::-webkit-scrollbar {
   display: none;
@@ -318,16 +358,17 @@
 
 .g-tabs button {
   flex: none;
-  height: 34px;
-  padding: 0 14px;
+  height: 30px;
+  padding: 0 12px;
   border-radius: 99px;
   border: 0;
   background: transparent;
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: 13px;
   color: #94a3b8;
   cursor: pointer;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 
 .g-tabs button:hover {
@@ -686,17 +727,18 @@
 .g-row {
   width: 100%;
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: stretch;
   justify-content: space-between;
   text-align: left;
-  padding: 14px;
+  padding: 12px 14px;
   background: #121722;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+  box-sizing: border-box;
 }
 
 .g-row:hover {
@@ -836,8 +878,8 @@
 .g-row-img-wrap {
   position: relative;
   flex: none;
-  width: 104px;
-  height: 104px;
+  width: 96px;
+  height: 96px;
   border-radius: 14px;
   overflow: hidden;
   background: #1a2232;
@@ -847,6 +889,38 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+@media (max-width: 480px) {
+  .g-row {
+    padding: 10px 12px;
+    gap: 10px;
+    border-radius: 16px;
+  }
+  .g-row-img-wrap {
+    width: 84px;
+    height: 84px;
+    border-radius: 12px;
+  }
+  .g-row-title strong {
+    font-size: 15px;
+  }
+  .g-desc {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .g-price {
+    font-size: 14px;
+  }
+  .btn-add-pill {
+    height: 28px;
+    padding: 0 9px;
+    font-size: 11.5px;
+  }
+  .counter-btn {
+    width: 26px;
+    height: 26px;
+  }
 }
 
 /* ---------- Sticky Floating Dual Bottom Bar ---------- */
@@ -1042,10 +1116,11 @@
 
 .stage-guest {
   border-radius: 0;
-  aspect-ratio: 1 / 1;
-  max-height: 52dvh;
+  aspect-ratio: auto;
+  height: clamp(230px, 36dvh, 320px);
   width: 100%;
   background: radial-gradient(circle at 50% 30%, #1a2233 0%, #0d121c 85%);
+  position: relative;
 }
 
 /* ---------- 3D Plating Surface Switcher ---------- */
@@ -1053,25 +1128,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 20px;
+  gap: 8px;
+  padding: 8px 16px;
   background: rgba(13, 18, 28, 0.95);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  flex-wrap: wrap;
+  overflow-x: auto;
 }
 
 .plating-label {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  flex: none;
 }
 
 .plating-pills {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 5px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.plating-pills::-webkit-scrollbar {
+  display: none;
 }
 
 .plating-pill {

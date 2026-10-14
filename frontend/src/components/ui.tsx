@@ -1,8 +1,9 @@
 import {
-  ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes,
+  ButtonHTMLAttributes, Children, InputHTMLAttributes, isValidElement, ReactNode,
+  SelectHTMLAttributes, TextareaHTMLAttributes,
   useEffect, useRef, useState
 } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Check, ChevronDown, Loader2, X } from 'lucide-react';
 import { Link } from '../lib/router';
 
 // ------------------------------------------------------------------ buttons
@@ -57,7 +58,142 @@ export function Field({ label, hint, error, children, className = '' }: {
 
 export const Input = (p: InputHTMLAttributes<HTMLInputElement>) => <input className="input" {...p} />;
 export const Textarea = (p: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea className="input textarea" {...p} />;
-export const Select = (p: SelectHTMLAttributes<HTMLSelectElement>) => <select className="input select" {...p} />;
+export type SelectOption = {
+  value: string;
+  label: string;
+  icon?: ReactNode;
+  badge?: string | number;
+};
+
+export function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder = 'Select option…',
+  className = '',
+  ariaLabel
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: (string | SelectOption)[];
+  placeholder?: string;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const normalizedOptions: SelectOption[] = options.map((opt) =>
+    typeof opt === 'string' ? { value: opt, label: opt } : opt
+  );
+
+  const selected = normalizedOptions.find((o) => o.value === value);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent | TouchEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [open]);
+
+  return (
+    <div className={`c-select-wrap ${open ? 'is-open' : ''} ${className}`} ref={containerRef}>
+      <button
+        type="button"
+        className="c-select-trigger"
+        onClick={() => setOpen(!open)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel ?? placeholder}
+      >
+        <span className="c-select-label">
+          {selected ? (
+            <>
+              {selected.icon && <span className="c-select-icon">{selected.icon}</span>}
+              <span className="c-select-opt-text">{selected.label}</span>
+              {selected.badge !== undefined && <span className="c-select-badge">{selected.badge}</span>}
+            </>
+          ) : (
+            <span className="c-select-placeholder">{placeholder}</span>
+          )}
+        </span>
+        <ChevronDown size={15} className={`c-select-chevron ${open ? 'rotated' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="c-select-menu" role="listbox">
+          {normalizedOptions.map((opt) => {
+            const isSelected = opt.value === value;
+            return (
+              <div
+                key={opt.value}
+                className={`c-select-option ${isSelected ? 'selected' : ''}`}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+              >
+                {opt.icon && <span className="c-select-icon">{opt.icon}</span>}
+                <span className="c-select-opt-text">{opt.label}</span>
+                {opt.badge !== undefined && <span className="c-select-badge">{opt.badge}</span>}
+                {isSelected && <Check size={14} className="c-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Select({
+  value,
+  onChange,
+  children,
+  className = '',
+  'aria-label': ariaLabel,
+  placeholder
+}: SelectHTMLAttributes<HTMLSelectElement> & { placeholder?: string }) {
+  const options: SelectOption[] = [];
+  Children.forEach(children, (child) => {
+    if (isValidElement(child)) {
+      const childProps = child.props as { value?: string; children?: ReactNode };
+      const val = childProps.value !== undefined ? childProps.value : (typeof childProps.children === 'string' ? childProps.children : '');
+      const lbl = typeof childProps.children === 'string' ? childProps.children : String(val);
+      options.push({ value: String(val), label: lbl });
+    }
+  });
+
+  return (
+    <CustomSelect
+      value={String(value ?? '')}
+      onChange={(newVal) => {
+        if (onChange) {
+          const syntheticEvent = {
+            target: { value: newVal },
+            currentTarget: { value: newVal }
+          } as unknown as React.ChangeEvent<HTMLSelectElement>;
+          onChange(syntheticEvent);
+        }
+      }}
+      options={options}
+      placeholder={placeholder}
+      className={className}
+      ariaLabel={ariaLabel}
+    />
+  );
+}
 
 export function Switch({ checked, onChange, label, description }: {
   checked: boolean; onChange: (v: boolean) => void; label: string; description?: string;

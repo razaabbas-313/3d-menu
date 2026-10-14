@@ -5,7 +5,7 @@ import { useAuth } from '../../lib/auth';
 import { money, sortCategories } from '../../lib/format';
 import { navigate, useLocation } from '../../lib/router';
 import { errorMessage, useToast } from '../../lib/toast';
-import { Button, Chip, ConfirmDialog, EmptyState, ErrorState, IconButton, Photo, Select, Spinner } from '../../components/ui';
+import { Button, Chip, ConfirmDialog, CustomSelect, EmptyState, ErrorState, IconButton, Photo, SelectOption, Spinner } from '../../components/ui';
 import { PageHeader } from './Shell';
 import { useMenu } from './menuStore';
 import { DishEditor, toInput } from './DishEditor';
@@ -23,6 +23,14 @@ export function MenuLibrary() {
   const [editor, setEditor] = useState<{ open: boolean; item: Item | null }>({ open: false, item: null });
   const [toDelete, setToDelete] = useState<Item | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const filterOptions: SelectOption[] = useMemo(() => [
+    { value: 'all', label: 'All dishes', badge: menu.items.length },
+    { value: 'with3d', label: 'Has 3D model', icon: <Box size={14} />, badge: menu.items.filter((i) => i.modelUrl).length },
+    { value: 'without3d', label: 'Photo only', badge: menu.items.filter((i) => !i.modelUrl).length },
+    { value: 'hidden', label: 'Hidden from guests', icon: <EyeOff size={14} />, badge: menu.items.filter((i) => !i.published).length },
+    { value: 'soldout', label: 'Sold out', badge: menu.items.filter((i) => !i.available).length },
+  ], [menu.items]);
 
   // "/app/menu?new=1" opens the editor straight away (used by "Add a dish" buttons elsewhere).
   useEffect(() => {
@@ -99,13 +107,14 @@ export function MenuLibrary() {
               <Search size={16} aria-hidden />
               <input type="search" placeholder="Search dishes" aria-label="Search dishes" value={q} onChange={(e) => setQ(e.target.value)} />
             </label>
-            <Select aria-label="Filter dishes" value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
-              <option value="all">All dishes</option>
-              <option value="with3d">Has 3D model</option>
-              <option value="without3d">No 3D model yet</option>
-              <option value="hidden">Hidden from guests</option>
-              <option value="soldout">Sold out</option>
-            </Select>
+            <div className="toolbar-select-wrap">
+              <CustomSelect
+                ariaLabel="Filter dishes"
+                value={filter}
+                onChange={(val) => setFilter(val as Filter)}
+                options={filterOptions}
+              />
+            </div>
           </div>
           <div className="cat-tabs" role="group" aria-label="Category">
             {['All', ...categories].map((c) => (

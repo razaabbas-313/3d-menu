@@ -88,7 +88,7 @@
 .cat-tabs button span { font-size: 12px; color: var(--slate); }
 .cat-tabs button.on { background: #253148; border-color: rgba(255, 255, 255, 0.2); color: #fff; }
 .cat-tabs button.on span { color: #94a3b8; }
-.dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+.dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 16px; }
 .dish { background: var(--glaze); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; display: grid; grid-template-rows: auto 1fr; transition: box-shadow .2s, transform .2s; }
 .dish:hover { box-shadow: var(--shadow-card); transform: translateY(-2px); }
 .dish.is-hidden .dish-img img { filter: grayscale(1); opacity: .6; }
@@ -140,25 +140,13 @@
 @media (max-width: 960px) {
   .studio-clean-layout {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
-}
-
-/* Sidebar: Dish Selector */
-.studio-clean-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: calc(100dvh - 140px);
-  position: sticky;
-  top: 20px;
-  overflow: hidden;
-  padding: 16px;
-}
-
-@media (max-width: 960px) {
   .studio-clean-sidebar {
     position: static;
-    max-height: 380px;
+    max-height: none;
+    padding: 14px;
+    gap: 10px;
   }
 }
 
@@ -244,6 +232,32 @@
   margin: 0 -4px;
   padding: 0 4px 6px;
   list-style: none;
+}
+
+@media (max-width: 960px) {
+  .studio-clean-dish-list {
+    flex-direction: row;
+    overflow-x: auto;
+    margin: 0 -6px;
+    padding: 4px 6px 10px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .studio-clean-dish-list::-webkit-scrollbar {
+    display: none;
+  }
+  .clean-pick {
+    flex: none;
+    width: 200px;
+    scroll-snap-align: start;
+    background: var(--glaze-raised);
+    border: 1px solid var(--line);
+  }
+  .clean-pick.on {
+    border-color: var(--cobalt);
+    background: rgba(59, 130, 246, 0.16);
+  }
 }
 
 .clean-pick {
@@ -455,7 +469,7 @@
 /* Bottom Grid: Simple Scale + Phone AR Test */
 .studio-clean-bottom-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 20px;
 }
 
@@ -611,7 +625,39 @@
 .mini-text strong { font-size: 20px; font-stretch: 85%; }
 .mini-text span { font-size: 13px; opacity: .85; }
 .mini-btn { background: var(--accent); color: var(--on-accent); text-align: center; padding: 11px; font-weight: 600; font-size: 14px; }
-.account { gap: 16px; }
+/* ---------- mobile dashboard optimizations ---------- */
+@media (max-width: 640px) {
+  .studio-clean-viewport {
+    aspect-ratio: 1 / 1;
+    min-height: 280px;
+    max-height: 380px;
+  }
+  .stage-photo-clean-img {
+    width: 110px;
+    height: 110px;
+  }
+  .clean-scale-presets {
+    gap: 4px;
+  }
+  .clean-scale-preset {
+    font-size: 11.5px;
+    padding: 5px 8px;
+  }
+  .toolbar {
+    flex-direction: column;
+  }
+  .toolbar .c-select-wrap,
+  .toolbar .search {
+    width: 100%;
+    min-width: 0;
+  }
+  .panel {
+    padding: 16px;
+  }
+  .page-head h1 {
+    font-size: 26px;
+  }
+}
 
 /* ---------- print ---------- */
 @media print {

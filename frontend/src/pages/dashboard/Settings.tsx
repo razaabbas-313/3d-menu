@@ -5,7 +5,7 @@ import { useAuth } from '../../lib/auth';
 import { CURRENCIES, initials } from '../../lib/format';
 import { ACCENTS, accentStyle } from '../../lib/theme';
 import { errorMessage, useToast } from '../../lib/toast';
-import { Button, Field, Input, Select, Textarea } from '../../components/ui';
+import { Button, CustomSelect, Field, Input, Textarea } from '../../components/ui';
 import { PageHeader } from './Shell';
 
 export function SettingsPage() {
@@ -155,7 +155,14 @@ export function SettingsPage() {
           </Field>
 
           <div className="form-row">
-            <Field label="Currency"><Select value={currency} onChange={(e) => setCurrency(e.target.value)}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</Select></Field>
+            <Field label="Currency">
+              <CustomSelect
+                value={currency}
+                onChange={setCurrency}
+                options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+                ariaLabel="Select Currency"
+              />
+            </Field>
             <Field label="Live Menu URL (QR Target)"><Input readOnly value={publicMenuUrl(slug || restaurant.slug)} /></Field>
           </div>
 
@@ -210,10 +217,15 @@ export function SettingsPage() {
               <Input value={googleMapsUrl} onChange={(e) => setGoogleMapsUrl(e.target.value)} placeholder="https://maps.google.com/..." maxLength={500} />
             </Field>
             <Field label="Guest Menu Aesthetic Theme" hint="Visual dining theme for guest screens">
-              <Select value={theme} onChange={(e) => setTheme(e.target.value)}>
-                <option value="dark">Luxury Obsidian (Dark Dining - Recommended)</option>
-                <option value="light">Porcelain White (Classic Light)</option>
-              </Select>
+              <CustomSelect
+                value={theme}
+                onChange={setTheme}
+                options={[
+                  { value: 'dark', label: 'Luxury Obsidian (Dark Dining - Recommended)' },
+                  { value: 'light', label: 'Porcelain White (Classic Light)' }
+                ]}
+                ariaLabel="Select Theme"
+              />
             </Field>
           </div>
 

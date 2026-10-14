@@ -693,3 +693,70 @@
   border-radius: 50%;
   background: radial-gradient(circle at 50% 40%, #ffffff 0 55%, #cbd5e1 100%);
 }
+
+/* ---------- Mobile Responsiveness for Marketing & Landing ---------- */
+@media (max-width: 640px) {
+  .l-nav {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  .l-brand {
+    font-size: 18px;
+    gap: 8px;
+  }
+  .l-brand svg {
+    width: 22px;
+    height: 22px;
+  }
+  .l-nav-cta .btn {
+    height: 34px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .l-hero {
+    padding: 24px 16px 40px;
+    gap: 24px;
+  }
+  .l-hero h1 {
+    font-size: clamp(30px, 8.5vw, 42px);
+    line-height: 1.05;
+  }
+  .l-hero-copy > p {
+    font-size: 15px;
+  }
+  .stage-hero {
+    max-height: 320px;
+    border-radius: 20px;
+  }
+  .l-roi-section {
+    padding: 24px 16px 48px;
+  }
+  .l-roi-card {
+    padding: 20px 16px;
+    border-radius: var(--r-lg);
+  }
+  .l-roi-left h2 {
+    font-size: clamp(24px, 6vw, 32px);
+  }
+  .l-roi-right {
+    padding: 18px 14px;
+  }
+  .roi-stat-value {
+    font-size: 38px;
+  }
+  .roi-breakdown {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .l-section {
+    padding: 44px 16px;
+    gap: 24px;
+  }
+  .l-bento article {
+    padding: 20px 16px;
+  }
+  .l-plans article {
+    padding: 22px 16px;
+  }
+}
+
