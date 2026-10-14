@@ -69,6 +69,16 @@
   .l-nav nav { display: none; }
 }
 
+@media (max-width: 480px) {
+  .l-nav {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  .l-nav-cta .btn-ghost {
+    display: none;
+  }
+}
+
 /* ---------- Hero Section ---------- */
 .l-hero {
   width: min(1200px, 100%);

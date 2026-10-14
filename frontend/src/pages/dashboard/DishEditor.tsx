@@ -1,9 +1,10 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ImagePlus, Trash2, X } from 'lucide-react';
+import { Box, ImagePlus, Trash2, X } from 'lucide-react';
 import { api, assetUrl, Item, ItemInput } from '../../lib/api';
 import { DEFAULT_CATEGORIES, parseTags } from '../../lib/format';
+import { navigate } from '../../lib/router';
 import { errorMessage, useToast } from '../../lib/toast';
-import { Button, Dialog, DialogHeader, Field, Input, Photo, Progress, Switch, Textarea } from '../../components/ui';
+import { Button, Chip, Dialog, DialogHeader, Field, Input, Photo, Progress, Switch, Textarea } from '../../components/ui';
 
 const TAG_PRESETS = ['Halal', 'Vegetarian', 'Vegan', 'Spicy', 'Gluten-free', 'Nut-free'];
 
@@ -45,10 +46,14 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
   const [published, setPublished] = useState(item?.published ?? true);
   const [file, setFile] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
+  const [modelFile, setModelFile] = useState<File | null>(null);
+  const [removeModel, setRemoveModel] = useState(false);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [modelProgress, setModelProgress] = useState(0);
   const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
+  const modelInput = useRef<HTMLInputElement>(null);
 
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : removePhoto ? null : assetUrl(item?.imageUrl) ?? null), [file, removePhoto, item]);
   useEffect(() => () => {
@@ -67,6 +72,15 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
     setError('');
     setFile(f);
     setRemovePhoto(false);
+  }
+
+  function pickModel(f: File | undefined) {
+    if (!f) return;
+    if (!f.name.toLowerCase().endsWith('.glb')) return setError('Choose a 3D model in .glb format.');
+    if (f.size > 25 * 1024 * 1024) return setError('3D model exceeds 25 MB. Choose a smaller one.');
+    setError('');
+    setModelFile(f);
+    setRemoveModel(false);
   }
 
   async function submit(e: FormEvent) {
@@ -105,13 +119,26 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
       try {
         saved = await api.uploadImage(saved.id, file, setProgress);
       } catch (err) {
-        onSaved(saved);
         toast.error(`The dish was saved, but its photo was not: ${errorMessage(err)}`);
-        setSaving(false);
-        onClose();
-        return;
       }
     }
+
+    if (removeModel && item?.modelUrl && !modelFile) {
+      try {
+        saved = await api.removeModel(saved.id);
+      } catch {
+        // ignore
+      }
+    }
+
+    if (modelFile) {
+      try {
+        saved = await api.uploadModel(saved.id, modelFile, setModelProgress);
+      } catch (err) {
+        toast.error(`The dish was saved, but its 3D model failed to attach: ${errorMessage(err)}`);
+      }
+    }
+
     onSaved(saved);
     toast.success(item ? `Saved changes to ${saved.name}.` : `Added ${saved.name} to your menu.`);
     setSaving(false);
@@ -120,7 +147,7 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
 
   return (
     <form className="drawer-form" onSubmit={submit} noValidate>
-      <DialogHeader title={item ? 'Edit dish' : 'Add a dish'} subtitle={item ? undefined : 'You can attach a 3D model after saving.'} onClose={onClose} />
+      <DialogHeader title={item ? 'Edit dish' : 'Add a dish'} subtitle="Manage photo, pricing, and 3D augmented reality model." onClose={onClose} />
       <div className="drawer-body">
         <div className="photo-pick">
           <div className="photo-frame">
@@ -132,6 +159,34 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
             {preview && <Button size="sm" variant="ghost" icon={<Trash2 size={15} />} onClick={() => { setFile(null); setRemovePhoto(true); }}>Remove</Button>}
             <span className="field-hint">JPG, PNG or WebP, up to 6 MB. A bright, top-down photo works best.</span>
           </div>
+        </div>
+
+        <div className="model-pick" style={{ padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--line)', display: 'grid', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+            <label style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink)' }}>3D AR Model (.glb)</label>
+            {(modelFile || (!removeModel && item?.modelUrl)) && (
+              <Chip tone="saffron" icon={<Box size={12} />}>3D Attached</Chip>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <input ref={modelInput} type="file" hidden accept=".glb,model/gltf-binary" onChange={(e) => { pickModel(e.target.files?.[0]); e.target.value = ''; }} />
+            <Button size="sm" type="button" icon={<Box size={14} />} onClick={() => modelInput.current?.click()}>
+              {modelFile ? modelFile.name : (!removeModel && item?.modelFileName) || (!removeModel && item?.modelUrl ? 'Replace .glb model' : 'Attach 3D model (.glb)')}
+            </Button>
+            {(modelFile || (!removeModel && item?.modelUrl)) && (
+              <Button size="sm" variant="ghost" type="button" icon={<Trash2 size={14} />} onClick={() => { setModelFile(null); setRemoveModel(true); }}>
+                Remove 3D
+              </Button>
+            )}
+            {item?.modelUrl && !modelFile && !removeModel && (
+              <Button size="sm" variant="ghost" type="button" onClick={() => { onClose(); navigate(`/app/studio?dish=${item.id}`); }}>
+                Open 3D Studio
+              </Button>
+            )}
+          </div>
+          <span className="field-hint" style={{ margin: 0 }}>
+            Upload a .glb 3D asset (up to 25 MB). Guests can view it in 3D and project it life-size on their table in AR.
+          </span>
         </div>
 
         <Field label="Dish name"><Input value={name} onChange={(e) => setName(e.target.value)} maxLength={140} placeholder="The Truffle Royale" autoFocus /></Field>
@@ -166,7 +221,9 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
         {error && <p className="form-error" role="alert">{error}</p>}
       </div>
       <div className="drawer-foot">
-        {saving && file && progress > 0 && progress < 1 ? <Progress value={progress} /> : <span />}
+        {saving && ((file && progress > 0 && progress < 1) || (modelFile && modelProgress > 0 && modelProgress < 1)) ? (
+          <Progress value={Math.max(progress, modelProgress)} />
+        ) : <span />}
         <div className="actions">
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="primary" type="submit" loading={saving}>{item ? 'Save changes' : 'Add dish'}</Button>

@@ -9,3 +9,4 @@ target/
 backend/data/
 backend/uploads/
 frontend/mock-api/.uploads/
+*.tsbuildinfo

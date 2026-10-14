@@ -359,5 +359,5 @@ export function Photo({ src, alt = '' }: { src?: string | null; alt?: string }) 
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
   if (!src || failed) return <PlatePlaceholder />;
-  return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} />;
+  return <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} />;
 }

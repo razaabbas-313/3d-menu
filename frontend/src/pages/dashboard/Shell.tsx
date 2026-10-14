@@ -1,16 +1,17 @@
-import { ReactNode, useEffect } from 'react';
+import { lazy, ReactNode, Suspense, useEffect } from 'react';
 import { Box, Eye, LayoutGrid, LogOut, QrCode, Settings, UtensilsCrossed } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { Link, navigate, useLocation } from '../../lib/router';
 import { initials } from '../../lib/format';
-import { Button, Chip, Logo } from '../../components/ui';
+import { Button, Chip, Logo, Spinner } from '../../components/ui';
 import { MenuProvider } from './menuStore';
-import { Overview } from './Overview';
-import { MenuLibrary } from './MenuLibrary';
-import { Studio } from './Studio';
-import { Share } from './Share';
-import { SettingsPage } from './Settings';
 import { Guest } from '../Guest';
+
+const Overview = lazy(() => import('./Overview').then((m) => ({ default: m.Overview })));
+const MenuLibrary = lazy(() => import('./MenuLibrary').then((m) => ({ default: m.MenuLibrary })));
+const Studio = lazy(() => import('./Studio').then((m) => ({ default: m.Studio })));
+const Share = lazy(() => import('./Share').then((m) => ({ default: m.Share })));
+const SettingsPage = lazy(() => import('./Settings').then((m) => ({ default: m.SettingsPage })));
 
 const NAV = [
   { to: '/app', label: 'Overview', short: 'Home', icon: LayoutGrid },
@@ -81,7 +82,11 @@ function Frame({ path }: { path: string }) {
           <strong>{restaurant?.name}</strong>
           <Chip tone={restaurant?.published ? 'basil' : 'neutral'}>{restaurant?.published ? 'Published' : 'Draft'}</Chip>
         </header>
-        <main className="d-content" id="main">{page}</main>
+        <main className="d-content" id="main">
+          <Suspense fallback={<div className="boot"><Spinner label="Loading…" /></div>}>
+            {page}
+          </Suspense>
+        </main>
       </div>
 
       <nav className="d-tabbar" aria-label="Main">

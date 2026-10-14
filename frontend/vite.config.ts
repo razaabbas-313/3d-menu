@@ -20,6 +20,15 @@ export default defineConfig({
     }
   },
   build: {
-    chunkSizeWarningLimit: 1500 // @google/model-viewer bundles three.js; it is lazy-loaded
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-qr': ['qrcode']
+        }
+      }
+    }
   }
 });

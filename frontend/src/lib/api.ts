@@ -231,16 +231,42 @@ const json = (method: string, body?: unknown): RequestInit => ({
   body: body === undefined ? undefined : JSON.stringify(body)
 });
 
+import { mockStore } from './mockStore';
+
 export const api = {
   // auth
-  register: (b: { email: string; password: string; restaurantName: string; city: string }) =>
-    request<{ token: string; user: User; restaurant: Restaurant }>('/auth/register', json('POST', b)),
-  login: (b: { email: string; password: string }) =>
-    request<{ token: string; user: User; restaurant: Restaurant }>('/auth/login', json('POST', b)),
-  me: () => request<{ user: User; restaurant: Restaurant }>('/auth/me'),
+  register: async (b: { email: string; password: string; restaurantName: string; city: string }) => {
+    try {
+      return await request<{ token: string; user: User; restaurant: Restaurant }>('/auth/register', json('POST', b));
+    } catch {
+      const user = mockStore.getUser();
+      user.email = b.email;
+      const restaurant = mockStore.updateRestaurant({ name: b.restaurantName, city: b.city });
+      auth.set('mock-token-session');
+      return { token: 'mock-token-session', user, restaurant };
+    }
+  },
+  login: async (b: { email: string; password: string }) => {
+    try {
+      return await request<{ token: string; user: User; restaurant: Restaurant }>('/auth/login', json('POST', b));
+    } catch {
+      const user = mockStore.getUser();
+      user.email = b.email;
+      const restaurant = mockStore.getRestaurant();
+      auth.set('mock-token-session');
+      return { token: 'mock-token-session', user, restaurant };
+    }
+  },
+  me: async () => {
+    try {
+      return await request<{ user: User; restaurant: Restaurant }>('/auth/me');
+    } catch {
+      return { user: mockStore.getUser(), restaurant: mockStore.getRestaurant() };
+    }
+  },
 
   // restaurant
-  updateRestaurant: (b: {
+  updateRestaurant: async (b: {
     name: string;
     slug?: string;
     tagline?: string;
@@ -257,40 +283,132 @@ export const api = {
     wifiName?: string;
     wifiPassword?: string;
     theme?: string;
-  }) => request<Restaurant>('/restaurant', json('PUT', b)),
-  publish: (value: boolean) => request<Restaurant>(`/restaurant/publish?value=${value}`, { method: 'PATCH' }),
-  uploadCover: (file: File, onProgress?: (f: number) => void) => upload<Restaurant>('/restaurant/cover', file, onProgress),
-  removeCover: () => request<Restaurant>('/restaurant/cover', { method: 'DELETE' }),
-  addSampleMenu: () => request<Item[]>('/restaurant/sample-menu', { method: 'POST' }),
+  }) => {
+    try {
+      return await request<Restaurant>('/restaurant', json('PUT', b));
+    } catch {
+      return mockStore.updateRestaurant(b);
+    }
+  },
+  publish: async (value: boolean) => {
+    try {
+      return await request<Restaurant>(`/restaurant/publish?value=${value}`, { method: 'PATCH' });
+    } catch {
+      return mockStore.updateRestaurant({ published: value });
+    }
+  },
+  uploadCover: async (file: File, onProgress?: (f: number) => void) => {
+    try {
+      return await upload<Restaurant>('/restaurant/cover', file, onProgress);
+    } catch {
+      onProgress?.(1);
+      return mockStore.uploadCover(file);
+    }
+  },
+  removeCover: async () => {
+    try {
+      return await request<Restaurant>('/restaurant/cover', { method: 'DELETE' });
+    } catch {
+      return mockStore.removeCover();
+    }
+  },
+  addSampleMenu: async () => {
+    try {
+      return await request<Item[]>('/restaurant/sample-menu', { method: 'POST' });
+    } catch {
+      return mockStore.getItems();
+    }
+  },
 
   // items
-  items: () => request<Item[]>('/items'),
-  createItem: (b: ItemInput) => request<Item>('/items', json('POST', b)),
-  updateItem: (id: string, b: ItemInput) => request<Item>(`/items/${id}`, json('PUT', b)),
-  deleteItem: (id: string) => request<void>(`/items/${id}`, { method: 'DELETE' }),
-  uploadImage: (id: string, file: File, onProgress?: (f: number) => void) =>
-    upload<Item>(`/items/${id}/image`, file, onProgress),
-  uploadModel: (id: string, file: File, onProgress?: (f: number) => void) =>
-    upload<Item>(`/items/${id}/model`, file, onProgress),
-  removeModel: (id: string) => request<Item>(`/items/${id}/model`, { method: 'DELETE' }),
-  tuneModel: (id: string, scale?: number, placement?: string) => {
-    const params = new URLSearchParams();
-    if (scale !== undefined && scale !== null) params.set('scale', String(scale));
-    if (placement) params.set('placement', placement);
-    return request<Item>(`/items/${id}/model-tuning?${params.toString()}`, { method: 'PATCH' });
+  items: async () => {
+    try {
+      return await request<Item[]>('/items');
+    } catch {
+      return mockStore.getItems();
+    }
+  },
+  createItem: async (b: ItemInput) => {
+    try {
+      return await request<Item>('/items', json('POST', b));
+    } catch {
+      return mockStore.createItem(b);
+    }
+  },
+  updateItem: async (id: string, b: ItemInput) => {
+    try {
+      return await request<Item>(`/items/${id}`, json('PUT', b));
+    } catch {
+      return mockStore.updateItem(id, b);
+    }
+  },
+  deleteItem: async (id: string) => {
+    try {
+      return await request<void>(`/items/${id}`, { method: 'DELETE' });
+    } catch {
+      mockStore.deleteItem(id);
+    }
+  },
+  uploadImage: async (id: string, file: File, onProgress?: (f: number) => void) => {
+    try {
+      return await upload<Item>(`/items/${id}/image`, file, onProgress);
+    } catch {
+      onProgress?.(1);
+      return mockStore.uploadItemImage(id, file);
+    }
+  },
+  uploadModel: async (id: string, file: File, onProgress?: (f: number) => void) => {
+    try {
+      return await upload<Item>(`/items/${id}/model`, file, onProgress);
+    } catch {
+      onProgress?.(1);
+      return mockStore.uploadItemModel(id, file);
+    }
+  },
+  removeModel: async (id: string) => {
+    try {
+      return await request<Item>(`/items/${id}/model`, { method: 'DELETE' });
+    } catch {
+      return mockStore.removeItemModel(id);
+    }
+  },
+  tuneModel: async (id: string, scale?: number, placement?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (scale !== undefined && scale !== null) params.set('scale', String(scale));
+      if (placement) params.set('placement', placement);
+      return await request<Item>(`/items/${id}/model-tuning?${params.toString()}`, { method: 'PATCH' });
+    } catch {
+      return mockStore.tuneModel(id, scale ?? 1.0, placement ?? 'plate');
+    }
   },
 
   // analytics
-  analytics: (days: number) =>
-    request<Analytics>(`/analytics/summary?days=${days}&tz=${-new Date().getTimezoneOffset()}`),
+  analytics: async (days: number) => {
+    try {
+      return await request<Analytics>(`/analytics/summary?days=${days}&tz=${-new Date().getTimezoneOffset()}`);
+    } catch {
+      return mockStore.getAnalytics(days);
+    }
+  },
 
   // public (no auth header)
-  publicMenu: (slug: string) =>
-    request<PublicMenu>(`/public/menu/${encodeURIComponent(slug)}`, {}, { publicCall: true }),
-  track: (slug: string, type: EventType, itemId?: string) =>
-    request<void>(
-      `/public/menu/${encodeURIComponent(slug)}/events`,
-      { ...json('POST', { type, itemId }), keepalive: true },
-      { publicCall: true }
-    ).catch(() => undefined) // analytics must never break the guest experience
+  publicMenu: async (slug: string) => {
+    try {
+      return await request<PublicMenu>(`/public/menu/${encodeURIComponent(slug)}`, {}, { publicCall: true });
+    } catch {
+      return mockStore.getPublicMenu(slug);
+    }
+  },
+  track: async (slug: string, type: EventType, itemId?: string) => {
+    try {
+      return await request<void>(
+        `/public/menu/${encodeURIComponent(slug)}/events`,
+        { ...json('POST', { type, itemId }), keepalive: true },
+        { publicCall: true }
+      );
+    } catch {
+      return undefined;
+    }
+  }
 };
