@@ -26,7 +26,8 @@ public final class Mappers {
     }
 
     public static ItemDto item(MenuItem i) {
-        return new ItemDto(i.getId().toString(), i.getName(), i.getCategory(), i.getDescription(), i.getPrice(),
+        String id = i.getId() != null ? i.getId().toString() : "item-" + i.getName().toLowerCase().replaceAll("[^a-z0-9]+", "-");
+        return new ItemDto(id, i.getName(), i.getCategory(), i.getDescription(), i.getPrice(),
                 i.getImageUrl(), i.getModelUrl(), i.getModelFileName(), i.getTags(),
                 i.isFeatured(), i.isAvailable(), i.isPublished(), i.getCreatedAt(),
                 i.getModelScale(), i.getModelPlacement(),
@@ -34,14 +35,16 @@ public final class Mappers {
     }
 
     public static PublicItemDto publicItem(MenuItem i) {
-        return new PublicItemDto(i.getId().toString(), i.getName(), i.getCategory(), i.getDescription(), i.getPrice(),
+        String id = i.getId() != null ? i.getId().toString() : "item-" + i.getName().toLowerCase().replaceAll("[^a-z0-9]+", "-");
+        return new PublicItemDto(id, i.getName(), i.getCategory(), i.getDescription(), i.getPrice(),
                 i.getImageUrl(), i.getModelUrl(), i.getTags(), i.isFeatured(), i.isAvailable(),
                 i.getModelScale(), i.getModelPlacement(),
                 i.getNameUr(), i.getDescriptionUr(), i.getNameAr(), i.getDescriptionAr());
     }
 
     public static LeadInquiryDto lead(LeadInquiry lead) {
-        return new LeadInquiryDto(lead.getId().toString(), lead.getName(), lead.getRestaurantName(),
+        String id = lead.getId() != null ? lead.getId().toString() : java.util.UUID.randomUUID().toString();
+        return new LeadInquiryDto(id, lead.getName(), lead.getRestaurantName(),
                 lead.getPhone(), lead.getEmail(), lead.getNotes(), lead.getCreatedAt());
     }
 }
