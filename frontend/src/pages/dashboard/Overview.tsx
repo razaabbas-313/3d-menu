@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Box, Check, Plus, QrCode, Sparkles, UtensilsCrossed } from 'lucide-react';
-import { Analytics, api } from '../../lib/api';
+import { ArrowRight, Box, Check, ExternalLink, Eye, Plus, QrCode, Sparkles, TrendingUp, UtensilsCrossed } from 'lucide-react';
+import { Analytics, api, publicMenuUrl } from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 import { deltaLabel, greeting, longDate } from '../../lib/format';
 import { navigate } from '../../lib/router';
 import { errorMessage, useToast } from '../../lib/toast';
 import { Button, ButtonLink, EmptyState, Spinner } from '../../components/ui';
-import { PageHeader } from './Shell';
 import { useMenu } from './menuStore';
 
 type Metric = 'scans' | 'views' | 'arLaunches';
-const METRICS: { key: Metric; label: string; pick: (a: Analytics) => { current: number; previous: number } }[] = [
-  { key: 'scans', label: 'Menu opens', pick: (a) => a.scans },
-  { key: 'views', label: 'Dish views', pick: (a) => a.itemViews },
-  { key: 'arLaunches', label: 'AR launches', pick: (a) => a.arLaunches }
+const METRICS: { key: Metric; label: string; short: string; icon: typeof QrCode; pick: (a: Analytics) => { current: number; previous: number } }[] = [
+  { key: 'scans', label: 'Menu Opens', short: 'Scans', icon: QrCode, pick: (a) => a.scans },
+  { key: 'views', label: 'Dish Views', short: 'Views', icon: Eye, pick: (a) => a.itemViews },
+  { key: 'arLaunches', label: 'AR Launches', short: '3D Views', icon: Box, pick: (a) => a.arLaunches }
 ];
 
 export function Overview() {
@@ -38,24 +37,25 @@ export function Overview() {
   }, [days]);
 
   if (!restaurant) return null;
-  if (menu.status === 'loading') return <Spinner label="Loading your menu" />;
+  if (menu.status === 'loading') return <Spinner label="Loading your dashboard" />;
 
   const items = menu.items;
   const withModels = items.filter((i) => i.modelUrl).length;
   const steps = [
-    { done: Boolean(restaurant.tagline && restaurant.city), icon: Sparkles, title: 'Finish your restaurant profile', text: 'Add a city and a short description guests will see.', to: '/app/settings', cta: 'Open settings' },
-    { done: items.length > 0, icon: UtensilsCrossed, title: 'Add your dishes', text: 'Names, prices and a photo for each dish.', to: '/app/menu', cta: 'Add dishes' },
-    { done: withModels > 0, icon: Box, title: 'Attach a 3D model', text: 'Upload a .glb file to a dish so guests can rotate it and place it on their table.', to: '/app/studio', cta: 'Open 3D studio' },
-    { done: restaurant.published, icon: QrCode, title: 'Publish and print your QR code', text: 'Make the menu public and put the code on your tables.', to: '/app/share', cta: 'Get your QR code' }
+    { done: Boolean(restaurant.tagline && restaurant.city), icon: Sparkles, title: 'Finish restaurant profile', text: 'Add city and short dining description.', to: '/app/settings', cta: 'Edit profile' },
+    { done: items.length > 0, icon: UtensilsCrossed, title: 'Add your dishes', text: 'Names, prices, photos, and categories.', to: '/app/menu', cta: 'Add dishes' },
+    { done: withModels > 0, icon: Box, title: 'Attach a 3D model', text: 'Upload a .glb file to rotate dishes on diner tables.', to: '/app/studio', cta: 'Open 3D studio' },
+    { done: restaurant.published, icon: QrCode, title: 'Publish and print QR', text: 'Make menu public and put codes on tables.', to: '/app/share', cta: 'Get QR code' }
   ];
   const doneCount = steps.filter((s) => s.done).length;
   const next = steps.find((s) => !s.done);
+  const liveUrl = publicMenuUrl(restaurant.slug);
 
   async function loadSamples() {
     setSeeding(true);
     try {
       menu.replaceAll(await api.addSampleMenu());
-      toast.success('Added six sample dishes. Edit or delete them any time.');
+      toast.success('Added six gourmet sample dishes. Edit or customize them anytime.');
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -67,62 +67,100 @@ export function Overview() {
 
   return (
     <>
-      <PageHeader
-        title={`${greeting()}, ${restaurant.name}`}
-        subtitle={longDate()}
-        actions={<ButtonLink to="/app/menu?new=1" variant="primary" icon={<Plus size={16} />}>Add a dish</ButtonLink>}
-      />
+      {/* Luxury Welcome & Status Header */}
+      <div className="overview-hero-card">
+        <div className="overview-hero-content">
+          <div className="overview-badge-row">
+            <span className={`live-status-dot ${restaurant.published ? 'is-live' : 'is-draft'}`} />
+            <span className="live-status-label">{restaurant.published ? 'Live Menu' : 'Draft Menu'}</span>
+            <a href={liveUrl} target="_blank" rel="noreferrer" className="overview-slug-link">
+              <span>{restaurant.slug}</span>
+              <ExternalLink size={12} />
+            </a>
+          </div>
 
+          <h1>{greeting()}, {restaurant.name}</h1>
+          <p className="overview-date">{longDate()}</p>
+        </div>
+
+        <div className="overview-hero-actions">
+          <ButtonLink to="/app/menu?new=1" variant="primary" icon={<Plus size={16} />}>
+            Add a dish
+          </ButtonLink>
+          <a href={liveUrl} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm">
+            <Eye size={15} />
+            <span>Preview live</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Empty State when no dishes */}
       {items.length === 0 ? (
         <section className="panel start-panel">
           <EmptyState
-            title="Your menu is empty"
-            text="Add your first dish, or start from six sample dishes so you can try the 3D studio, QR code and guest menu straight away."
+            title="Your menu is currently empty"
+            text="Add your first signature dish, or import pre-configured sample dishes with 3D models to try the guest menu immediately."
             action={
               <div className="actions center">
-                <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/app/menu?new=1')}>Add your first dish</Button>
-                <Button loading={seeding} onClick={loadSamples}>Use sample dishes</Button>
+                <Button variant="primary" icon={<Plus size={16} />} onClick={() => navigate('/app/menu?new=1')}>
+                  Add your first dish
+                </Button>
+                <Button loading={seeding} onClick={loadSamples}>
+                  Load sample dishes
+                </Button>
               </div>
             }
           />
         </section>
       ) : (
+        /* Setup Progress Checklist */
         doneCount < steps.length && (
-          <section className="panel setup" aria-label="Setup checklist">
+          <section className="panel setup-card" aria-label="Setup checklist">
             <div className="setup-head">
               <div>
-                <h2>Get ready for your first guests</h2>
-                <p className="muted">{doneCount} of {steps.length} steps done</p>
+                <h2>Restaurant Launch Checklist</h2>
+                <p className="muted">{doneCount} of {steps.length} milestones complete ({Math.round((doneCount / steps.length) * 100)}%)</p>
               </div>
-              {next && <ButtonLink to={next.to} variant="primary" icon={<ArrowRight size={16} />}>{next.cta}</ButtonLink>}
+              {next && (
+                <ButtonLink to={next.to} variant="primary" size="sm" icon={<ArrowRight size={15} />}>
+                  {next.cta}
+                </ButtonLink>
+              )}
             </div>
+
             <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={doneCount}>
-              <span style={{ width: `${Math.max(4, (doneCount / steps.length) * 100)}%` }} />
+              <span style={{ width: `${Math.max(6, (doneCount / steps.length) * 100)}%` }} />
             </div>
-            <ol className="steps">
-              {steps.map((s, i) => (
-                <li key={s.title} className={s.done ? 'done' : s === next ? 'next' : ''}>
-                  <span className="step-mark">{s.done ? <Check size={14} /> : i + 1}</span>
-                  <div>
-                    <strong>{s.title}</strong>
-                    <p>{s.text}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
+
+            <div className="steps-container">
+              <ol className="steps">
+                {steps.map((s, i) => (
+                  <li key={s.title} className={s.done ? 'done' : s === next ? 'next' : ''}>
+                    <span className="step-mark">{s.done ? <Check size={14} /> : i + 1}</span>
+                    <div className="step-text">
+                      <strong>{s.title}</strong>
+                      <p>{s.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </section>
         )
       )}
 
+      {/* Guest Activity Analytics Panel */}
       <section className="panel activity" aria-label="Guest activity">
         <div className="panel-head">
-          <div>
-            <h2>Guest activity</h2>
-            <p className="muted">What guests do after scanning your QR code.</p>
+          <div className="panel-head-titles">
+            <h2>Guest Activity & Engagement</h2>
+            <p className="muted">Real-time interactions from QR table scans and mobile 3D viewers.</p>
           </div>
           <div className="segmented" role="group" aria-label="Time range">
             {[7, 30].map((d) => (
-              <button key={d} className={days === d ? 'on' : ''} aria-pressed={days === d} onClick={() => setDays(d)}>{d} days</button>
+              <button key={d} className={days === d ? 'on' : ''} aria-pressed={days === d} onClick={() => setDays(d)}>
+                {d} days
+              </button>
             ))}
           </div>
         </div>
@@ -130,63 +168,96 @@ export function Overview() {
         {statsError ? (
           <p className="muted" role="alert">{statsError}</p>
         ) : !stats ? (
-          <Spinner label="Loading activity" />
+          <Spinner label="Loading activity analytics" />
         ) : (
           <>
-            <div className="kpis" role="tablist" aria-label="Metric">
+            {/* Interactive KPIs Strip */}
+            <div className="kpis-grid" role="tablist" aria-label="Select metric">
               {METRICS.map((m) => {
                 const d = m.pick(stats);
+                const Icon = m.icon;
+                const isSelected = metric === m.key;
                 return (
-                  <button key={m.key} role="tab" aria-selected={metric === m.key} className={`kpi ${metric === m.key ? 'on' : ''}`} onClick={() => setMetric(m.key)}>
-                    <span className="kpi-label">{m.label}</span>
-                    <span className="kpi-value">{d.current.toLocaleString()}</span>
-                    <span className="kpi-delta">{deltaLabel(d.current, d.previous, days)}</span>
+                  <button
+                    key={m.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    className={`kpi-card ${isSelected ? 'active' : ''}`}
+                    onClick={() => setMetric(m.key)}
+                  >
+                    <div className="kpi-card-head">
+                      <span className="kpi-icon-wrap"><Icon size={16} /></span>
+                      <span className="kpi-label">{m.label}</span>
+                    </div>
+                    <div className="kpi-value">{d.current.toLocaleString()}</div>
+                    <div className="kpi-delta-pill">
+                      <TrendingUp size={12} />
+                      <span>{deltaLabel(d.current, d.previous, days)}</span>
+                    </div>
                   </button>
                 );
               })}
             </div>
-            <Chart series={stats.series} metric={metric} label={active.label} />
+
+            <div className="chart-wrapper">
+              <Chart series={stats.series} metric={metric} label={active.label} />
+            </div>
           </>
         )}
       </section>
 
+      {/* Two Column Grid: Top Dishes and 3D Model Coverage */}
       <div className="two-col">
-        <section className="panel">
+        {/* Most Viewed Dishes */}
+        <section className="panel top-dishes-panel">
           <div className="panel-head">
             <div>
-              <h2>Most viewed dishes</h2>
-              <p className="muted">Last {days} days</p>
+              <h2>Top Performing Dishes</h2>
+              <p className="muted">Most viewed on diner phones over the last {days} days.</p>
             </div>
           </div>
           {stats && stats.topItems.length > 0 ? (
-            <ol className="top-list">
-              {stats.topItems.map((t) => (
-                <li key={t.id}>
-                  <strong>{t.name}</strong>
-                  <span>{t.views} {t.views === 1 ? 'view' : 'views'}</span>
-                  <span>{t.arLaunches} AR</span>
+            <ol className="top-dishes-list">
+              {stats.topItems.map((t, idx) => (
+                <li key={t.id} className="top-dish-item">
+                  <span className="top-dish-rank">#{idx + 1}</span>
+                  <div className="top-dish-info">
+                    <strong>{t.name}</strong>
+                    <div className="top-dish-stats">
+                      <span>{t.views} {t.views === 1 ? 'view' : 'views'}</span>
+                      <span className="dot-sep">·</span>
+                      <span className="ar-count-tag"><Box size={12} /> {t.arLaunches} in 3D</span>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="muted">Dish views appear here once guests start opening dishes on your public menu.</p>
+            <p className="muted empty-desc">Dish activity will populate here as diners scan table QR codes.</p>
           )}
         </section>
 
-        <section className="panel">
+        {/* 3D AR Model Coverage */}
+        <section className="panel coverage-panel">
           <div className="panel-head">
             <div>
-              <h2>3D coverage</h2>
-              <p className="muted">{withModels} of {items.length} dishes have a 3D model.</p>
+              <h2>3D Model Coverage</h2>
+              <p className="muted">{withModels} of {items.length} dishes have life-size 3D AR.</p>
             </div>
           </div>
-          <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={withModels}>
-            <span style={{ width: `${items.length ? Math.max(3, (withModels / items.length) * 100) : 0}%` }} />
+          <div className="coverage-bar-wrap">
+            <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={items.length} aria-valuenow={withModels}>
+              <span style={{ width: `${items.length ? Math.max(4, (withModels / items.length) * 100) : 0}%` }} />
+            </div>
+            <span className="coverage-pct">{items.length ? Math.round((withModels / items.length) * 100) : 0}%</span>
           </div>
-          <p className="muted spaced">
-            Start with the dishes guests ask about most: signature plates, desserts and anything with a dramatic presentation.
+          <p className="muted coverage-desc">
+            3D interactive models allow guests to project dishes onto their table before ordering, increasing upsells by up to 30%.
           </p>
-          <ButtonLink to="/app/studio" icon={<Box size={16} />}>Open 3D studio</ButtonLink>
+          <ButtonLink to="/app/studio" variant="secondary" icon={<Box size={16} />}>
+            Open 3D Studio
+          </ButtonLink>
         </section>
       </div>
     </>
@@ -215,7 +286,7 @@ function Chart({ series, metric, label }: { series: Analytics['series']; metric:
         <span>{fmt(series[0]?.date ?? new Date().toISOString().slice(0, 10))}</span>
         <span>Today</span>
       </div>
-      {total === 0 && <figcaption className="chart-empty">No activity in this period yet. Publish your menu and share the QR code to start collecting data.</figcaption>}
+      {total === 0 && <figcaption className="chart-empty">No activity recorded yet. Scan your table QR code to start tracking.</figcaption>}
     </figure>
   );
 }

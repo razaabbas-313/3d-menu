@@ -1,5 +1,5 @@
-import { lazy, ReactNode, Suspense, useEffect } from 'react';
-import { Box, Eye, LayoutGrid, LogOut, QrCode, Settings, UtensilsCrossed } from 'lucide-react';
+import { lazy, ReactNode, Suspense, useEffect, useState } from 'react';
+import { Box, Eye, LayoutGrid, LogOut, Menu as MenuIcon, QrCode, Settings, UtensilsCrossed, X } from 'lucide-react';
 import { useAuth } from '../../lib/auth';
 import { Link, navigate, useLocation } from '../../lib/router';
 import { initials } from '../../lib/format';
@@ -34,6 +34,7 @@ export function Dashboard() {
 
 function Frame({ path }: { path: string }) {
   const { restaurant, signOut } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   let page: ReactNode;
   switch (path) {
     case '/app': page = <Overview />; break;
@@ -68,7 +69,7 @@ function Frame({ path }: { path: string }) {
             <div className="d-avatar" aria-hidden>{initials(restaurant?.name ?? '')}</div>
             <div className="d-me-text">
               <strong>{restaurant?.name}</strong>
-              <Chip tone={restaurant?.published ? 'basil' : 'neutral'}>{restaurant?.published ? 'Published' : 'Draft'}</Chip>
+              <Chip tone={restaurant?.published ? 'basil' : 'neutral'}>{restaurant?.published ? '● Live' : '○ Draft'}</Chip>
             </div>
           </div>
           <Button size="sm" icon={<Eye size={15} />} onClick={() => navigate('/app/preview')}>Preview menu</Button>
@@ -78,9 +79,19 @@ function Frame({ path }: { path: string }) {
 
       <div className="d-main">
         <header className="d-topbar">
-          <Link to="/app" aria-label="Atelier AR home"><Logo size={30} /></Link>
-          <strong>{restaurant?.name}</strong>
-          <Chip tone={restaurant?.published ? 'basil' : 'neutral'}>{restaurant?.published ? 'Published' : 'Draft'}</Chip>
+          <button
+            type="button"
+            className="icon-btn d-topbar-menu-btn"
+            aria-label="Open navigation menu"
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <MenuIcon size={21} />
+          </button>
+          <Link to="/app" className="d-topbar-brand" aria-label="Atelier AR home"><Logo size={28} /></Link>
+          <strong className="d-topbar-name">{restaurant?.name}</strong>
+          <Chip tone={restaurant?.published ? 'basil' : 'neutral'}>
+            {restaurant?.published ? '● Live' : '○ Draft'}
+          </Chip>
         </header>
         <main className="d-content" id="main">
           <Suspense fallback={<div className="boot"><Spinner label="Loading…" /></div>}>
@@ -97,9 +108,76 @@ function Frame({ path }: { path: string }) {
           </Link>
         ))}
       </nav>
+
+      {/* Mobile Fixed Sliding Drawer Sidebar */}
+      {mobileNavOpen && (
+        <div className="d-mobile-drawer-backdrop" onClick={() => setMobileNavOpen(false)}>
+          <aside className="d-mobile-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="d-mobile-drawer-head">
+              <Link to="/app" className="d-brand" onClick={() => setMobileNavOpen(false)}>
+                <Logo size={30} />
+                <span>Atelier AR</span>
+              </Link>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label="Close navigation"
+                onClick={() => setMobileNavOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="d-mobile-drawer-restaurant">
+              <div className="d-avatar" aria-hidden>{initials(restaurant?.name ?? '')}</div>
+              <div className="d-me-text">
+                <strong>{restaurant?.name}</strong>
+                <Chip tone={restaurant?.published ? 'basil' : 'neutral'}>
+                  {restaurant?.published ? '● Live Menu' : '○ Draft'}
+                </Chip>
+              </div>
+            </div>
+
+            <nav className="d-mobile-drawer-nav" aria-label="Main navigation">
+              {NAV.map(({ to, label, icon: Icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={`d-nav ${path === to ? 'active' : ''}`}
+                  onClick={() => setMobileNavOpen(false)}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </nav>
+
+            <div className="d-mobile-drawer-foot">
+              <Button
+                size="sm"
+                icon={<Eye size={15} />}
+                onClick={() => { setMobileNavOpen(false); navigate('/app/preview'); }}
+                className="wide"
+              >
+                Preview guest menu
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<LogOut size={15} />}
+                onClick={signOut}
+                className="wide"
+              >
+                Sign out
+              </Button>
+            </div>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
+
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
