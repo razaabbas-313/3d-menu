@@ -1,8 +1,9 @@
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; color-scheme: dark; }
+html { -webkit-text-size-adjust: 100%; color-scheme: dark; overflow-x: hidden; width: 100%; max-width: 100vw; }
 body {
   margin: 0; font-family: var(--font); font-size: 15px; line-height: 1.5; color: var(--ink);
   background: var(--porcelain); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  overflow-x: hidden; width: 100%; max-width: 100vw;
 }
 h1, h2, h3, p { margin: 0; }
 h1, h2, h3 { font-stretch: 86%; letter-spacing: -0.015em; line-height: 1.15; font-weight: 700; color: var(--ink); }
@@ -271,7 +272,15 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .progress span { display: block; height: 100%; border-radius: inherit; background: var(--cobalt); transition: width .3s; }
 
 /* ---------- dialogs ---------- */
-.dialog { border: 1px solid var(--line); padding: 0; color: var(--ink); background: var(--glaze); max-width: 100vw; }
+dialog.dialog,
+dialog:modal {
+  border: 1px solid var(--line);
+  padding: 0;
+  color: var(--ink);
+  background: var(--glaze);
+  max-width: 100vw !important;
+  max-height: 100dvh !important;
+}
 .dialog::backdrop { background: rgba(0, 0, 0, .75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .dialog-modal { width: min(440px, calc(100vw - 32px)); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); }
 .dialog-modal[open] { animation: pop .18s ease-out; }
@@ -280,6 +289,36 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
 .dialog-sheet { margin: auto auto 0; width: min(560px, 100vw); max-height: 94dvh; border-radius: 28px 28px 0 0; overflow: hidden auto; }
 .dialog-sheet[open] { animation: sheet-up .28s cubic-bezier(.2,.8,.2,1); }
 @media (min-width: 760px) { .dialog-sheet { margin: auto; border-radius: 28px; max-height: 90dvh; } }
+@media (max-width: 759px) {
+  dialog.dialog-sheet {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    border-radius: 24px 24px 0 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    max-height: 92dvh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  dialog.dialog-modal {
+    width: min(440px, calc(100vw - 24px)) !important;
+    max-width: calc(100vw - 24px) !important;
+    margin: auto !important;
+  }
+}
+@media (max-width: 640px) {
+  input[type='text'],
+  input[type='search'],
+  input[type='email'],
+  input[type='password'],
+  textarea {
+    font-size: 16px !important;
+  }
+}
 @keyframes pop { from { opacity: 0; transform: scale(.96); } }
 @keyframes slide-in { from { transform: translateX(40px); opacity: 0; } }
 @keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } }
@@ -320,7 +359,7 @@ ul, ol { margin: 0; padding: 0; list-style: none; }
   width: 100%; height: 100%; position: absolute; inset: 0; z-index: 2;
   background: transparent; --poster-color: transparent; --progress-bar-height: 0px; outline: none;
   cursor: grab;
-  touch-action: none;
+  touch-action: pan-y;
 }
 .mv model-viewer:active {
   cursor: grabbing;

@@ -724,6 +724,16 @@
   .l-hero-copy > p {
     font-size: 15px;
   }
+  .l-hero .actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+  .l-hero .actions .btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
   .stage-hero {
     max-height: 320px;
     border-radius: 20px;
