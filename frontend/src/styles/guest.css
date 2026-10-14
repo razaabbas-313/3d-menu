@@ -39,8 +39,8 @@
 .g-hero {
   position: relative;
   background: linear-gradient(180deg, rgba(9, 12, 19, 0.25) 0%, rgba(9, 12, 19, 0.85) 60%, #090c13 100%),
-    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 75%),
-    #0d111a;
+  radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 30%, transparent) 0%, transparent 75%),
+  #0d111a;
   background-size: cover, auto, auto;
   background-position: center;
   min-height: 240px;
@@ -2503,4 +2503,668 @@ dialog.dialog-sheet {
 .preview-content {
   flex: 1;
   width: 100%;
+}
+
+/* ==========================================================================
+   Mobile-first refinement layer
+   Clean, thumb-friendly 3D menu tuned to help guests discover dishes in 3D
+   and build a bigger order. Loaded last so it refines the rules above.
+   ========================================================================== */
+
+.guest-dark {
+  --tap: 44px;
+  --radius-card: 18px;
+  --gutter: 16px;
+  overflow-x: hidden;
+}
+
+.guest-dark * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.guest-dark button,
+.guest-dark [role='button'] {
+  touch-action: manipulation;
+}
+
+.guest-dark :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Prevent iOS zoom-on-focus: inputs must be 16px */
+.guest-dark input,
+.guest-dark textarea {
+  font-size: 16px;
+}
+
+/* ---------- Hero: compact, content first ---------- */
+.g-hero {
+  min-height: 0;
+  padding: calc(12px + env(safe-area-inset-top)) var(--gutter) 18px;
+  background-size: cover, auto, auto;
+}
+
+.g-hero-top-actions {
+  position: static;
+  width: min(720px, 100%);
+  margin: 0 auto 18px;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.g-action-pill {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.g-name {
+  font-size: clamp(26px, 8vw, 44px);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.g-tagline {
+  font-size: 13.5px;
+}
+
+.g-social-pill {
+  height: 34px;
+  padding: 0 12px;
+}
+
+/* ---------- Sticky bar: slim and calm ---------- */
+.g-bar {
+  padding-top: env(safe-area-inset-top);
+}
+
+.preview-content .g-bar {
+  top: calc(52px + env(safe-area-inset-top));
+}
+
+.g-search {
+  padding: 10px var(--gutter) 6px;
+}
+
+.g-search svg {
+  left: calc(var(--gutter) + 14px);
+  top: 22px;
+}
+
+.g-search input {
+  height: 42px;
+}
+
+.g-search-clear {
+  right: calc(var(--gutter) + 8px);
+  top: 12px;
+  width: 36px;
+  height: 36px;
+}
+
+.g-filter-bar,
+.g-tabs {
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+  scroll-padding-left: var(--gutter);
+}
+
+.g-filter-chip {
+  height: 34px;
+  padding: 0 13px;
+}
+
+.g-tabs button {
+  height: 36px;
+}
+
+/* ---------- Discovery banner ---------- */
+.g-discovery-banner {
+  padding: 0 var(--gutter);
+}
+
+.g-discovery-card {
+  padding: 10px 12px;
+  gap: 12px;
+}
+
+.g-discovery-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.g-discovery-text strong {
+  font-size: 13.5px;
+}
+
+.g-discovery-text span {
+  font-size: 11.5px;
+}
+
+/* ---------- Main stream ---------- */
+.g-main {
+  padding: 18px var(--gutter) calc(112px + env(safe-area-inset-bottom));
+  gap: 28px;
+}
+
+.g-section {
+  scroll-margin-top: 150px;
+}
+
+.g-section-head h2,
+.g-featured-head h2 {
+  font-size: 20px;
+}
+
+/* Featured rail: edge-to-edge scroll with peek of next card */
+.g-rail {
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 4px var(--gutter) 14px;
+  gap: 12px;
+}
+
+.g-feature-card {
+  width: min(78vw, 300px);
+}
+
+.g-feature-img {
+  aspect-ratio: 4 / 3;
+}
+
+/* ---------- Dish cards: image first, clear price + one-tap add ---------- */
+.g-dish-list {
+  gap: 10px;
+}
+
+.g-row {
+  padding: 12px;
+  gap: 10px;
+  border-radius: var(--radius-card);
+}
+
+.g-row:hover {
+  transform: none;
+}
+
+.g-row:active {
+  transform: scale(0.992);
+  background: #161c2b;
+}
+
+.g-row-main {
+  gap: 12px;
+}
+
+.g-row-img-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
+}
+
+.g-row-title strong {
+  font-size: 15.5px;
+}
+
+.g-desc {
+  font-size: 12.5px;
+}
+
+.g-3d-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.g-row-bottom {
+  padding-top: 10px;
+}
+
+.g-price {
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.btn-add-pill {
+  height: 38px;
+  min-width: 78px;
+  justify-content: center;
+  padding: 0 16px;
+  background: color-mix(in srgb, var(--accent) 22%, #1c2538);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.btn-add-pill:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.order-counter {
+  padding: 3px;
+}
+
+.counter-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.counter-val {
+  min-width: 22px;
+}
+
+/* ---------- Floating bottom bar: always reachable by thumb ---------- */
+.floating-bottom-bar,
+.floating-order-bar {
+  padding: 24px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(9, 12, 19, 0) 0%, rgba(9, 12, 19, 0.92) 55%);
+}
+
+.floating-bottom-inner {
+  gap: 10px;
+}
+
+.floating-service-btn {
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.floating-service-btn span {
+  display: none;
+}
+
+.floating-empty-hint,
+.floating-order-in {
+  height: 52px;
+  min-width: 0;
+}
+
+.floating-empty-hint span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floating-order-in {
+  padding: 6px 8px 6px 8px;
+  gap: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, #171e2c);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.order-summary-text {
+  line-height: 1.2;
+}
+
+.order-summary-text strong {
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.order-summary-text span {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-view-order {
+  display: inline-grid;
+  place-items: center;
+  height: 38px;
+  padding: 0 14px;
+  background: var(--accent);
+  color: var(--on-accent);
+  white-space: nowrap;
+}
+
+/* ---------- Dish sheet: the 3D model is the hero ---------- */
+dialog.dialog-sheet {
+  max-width: 100vw;
+}
+
+.sheet-dark {
+  width: 100%;
+  height: 94dvh;
+  max-height: 94dvh;
+}
+
+.stage-guest {
+  height: clamp(260px, 44dvh, 400px);
+}
+
+.sheet-close-pill {
+  width: 38px;
+  height: 38px;
+  top: 4px;
+}
+
+.sheet-plating-bar {
+  padding: 10px var(--gutter);
+  gap: 10px;
+}
+
+.plating-pill {
+  height: 36px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.sheet-body {
+  padding: 16px var(--gutter) 20px;
+}
+
+.sheet-title h2 {
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.sheet-price {
+  font-size: 20px;
+}
+
+.sheet-ar {
+  height: 52px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.sheet-sticky-footer {
+  padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom));
+}
+
+.btn-sheet-order {
+  height: 52px;
+}
+
+.pairing-card-body {
+  gap: 10px;
+}
+
+.pairing-card-img {
+  width: 52px;
+  height: 52px;
+}
+
+.btn-add-pairing {
+  height: 38px;
+  padding: 0 14px;
+}
+
+/* ---------- Order sheet: bottom-sheet feel + upsell ---------- */
+.order-dialog,
+.service-dialog {
+  width: 100%;
+  max-width: 520px;
+}
+
+.order-sheet {
+  max-height: 90dvh;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+}
+
+.order-sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #0e131d;
+  padding: 14px var(--gutter);
+}
+
+.order-sheet-body {
+  padding: 16px var(--gutter) calc(28px + env(safe-area-inset-bottom));
+  gap: 14px;
+}
+
+.sheet-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.order-item-row {
+  align-items: flex-start;
+}
+
+.order-item-info strong {
+  font-size: 14.5px;
+}
+
+.order-item-actions .counter-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.item-delete-btn {
+  width: 34px;
+  height: 34px;
+}
+
+.table-number-row input,
+.service-table-input input {
+  height: 46px;
+}
+
+.order-notes-wrap textarea {
+  min-height: 64px;
+}
+
+.split-chip {
+  height: 36px;
+  padding: 0 14px;
+}
+
+.btn-order-wa {
+  height: 52px;
+}
+
+.btn-order-receipt {
+  height: 46px;
+}
+
+.upsell-box {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0 4px;
+}
+
+.upsell-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fbbf24;
+}
+
+.upsell-rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 2px var(--gutter) 6px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.upsell-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.upsell-card {
+  flex: none;
+  width: 140px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #141b29;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  scroll-snap-align: start;
+}
+
+.upsell-img {
+  aspect-ratio: 4 / 3;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0b0f17;
+}
+
+.upsell-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upsell-card strong {
+  font-size: 13px;
+  line-height: 1.25;
+  color: #f8fafc;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5em;
+}
+
+.upsell-card > span {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.upsell-card .btn-add-pill {
+  width: 100%;
+  height: 34px;
+}
+
+/* ---------- Service / roulette / wifi / share ---------- */
+.service-option-card {
+  min-height: 64px;
+}
+
+.service-options-grid {
+  grid-template-columns: 1fr;
+}
+
+.roulette-modal-content,
+.wifi-modal-content,
+.share-modal-content {
+  padding: 22px var(--gutter) calc(22px + env(safe-area-inset-bottom));
+}
+
+.share-input {
+  height: 44px;
+}
+
+.receipt-card {
+  padding: 22px 18px;
+}
+
+/* ---------- Tablet / desktop: roomier, two-column dishes ---------- */
+@media (min-width: 640px) {
+  .guest-dark {
+    --gutter: 24px;
+  }
+
+  .g-service-pill {
+    display: inline-flex;
+  }
+
+  .service-options-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .floating-service-btn {
+    width: auto;
+    padding: 0 18px;
+    border-radius: 99px;
+  }
+
+  .floating-service-btn span {
+    display: inline;
+  }
+
+  .sheet-dark {
+    height: min(88dvh, 780px);
+  }
+}
+
+@media (min-width: 900px) {
+  .g-main {
+    width: min(1040px, 100%);
+  }
+
+  .g-hero-in,
+  .g-search,
+  .g-filter-bar,
+  .g-tabs,
+  .g-discovery-banner {
+    width: min(1040px, 100%);
+  }
+
+  .g-hero-top-actions {
+    width: min(1040px, 100%);
+  }
+
+  .g-dish-list {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .g-row:hover {
+    transform: translateY(-2px);
+  }
+
+  .g-feature-card {
+    width: 320px;
+  }
+
+  .floating-bottom-inner {
+    max-width: 680px;
+  }
+}
+
+/* ---------- Very small phones ---------- */
+@media (max-width: 360px) {
+  .g-row-img-wrap {
+    width: 82px;
+    height: 82px;
+  }
+
+  .g-row-title strong {
+    font-size: 14.5px;
+  }
+
+  .btn-add-pill {
+    min-width: 68px;
+    padding: 0 12px;
+  }
+
+  .btn-view-order {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
+
+/* ---------- Respect motion preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .guest-dark *,
+  .guest-dark *::before,
+  .guest-dark *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
