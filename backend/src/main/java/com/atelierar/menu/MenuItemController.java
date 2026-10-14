@@ -27,11 +27,14 @@ public class MenuItemController {
     private final RestaurantService restaurants;
     private final MenuItemRepository items;
     private final StorageService storage;
+    private final com.atelierar.publicapi.PublicMenuSnapshotService snapshots;
 
-    public MenuItemController(RestaurantService restaurants, MenuItemRepository items, StorageService storage) {
+    public MenuItemController(RestaurantService restaurants, MenuItemRepository items, StorageService storage,
+                              com.atelierar.publicapi.PublicMenuSnapshotService snapshots) {
         this.restaurants = restaurants;
         this.items = items;
         this.storage = storage;
+        this.snapshots = snapshots;
     }
 
     @GetMapping
@@ -46,7 +49,9 @@ public class MenuItemController {
         Restaurant r = restaurants.current();
         MenuItem item = new MenuItem(r.getId());
         applyRequest(item, req);
-        return Mappers.item(items.save(item));
+        MenuItem saved = items.save(item);
+        snapshots.updateSnapshot(r.getId());
+        return Mappers.item(saved);
     }
 
     @PutMapping("/{id}")
@@ -56,6 +61,7 @@ public class MenuItemController {
         applyRequest(item, req);
         MenuItem saved = items.save(item);
         if (oldImage != null && !oldImage.equals(saved.getImageUrl())) storage.deleteQuietly(oldImage);
+        snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);
     }
 
@@ -68,27 +74,41 @@ public class MenuItemController {
         items.delete(item);
         storage.deleteQuietly(image);
         storage.deleteQuietly(model);
+        snapshots.updateSnapshot(item.getRestaurantId());
+    }
+
+    @PatchMapping("/{id}/available")
+    public ItemDto toggleAvailable(@PathVariable UUID id, @RequestParam boolean value) {
+        MenuItem item = owned(id);
+        item.apply(item.getName(), item.getCategory(), item.getDescription(), item.getPrice(), item.getTags(),
+                item.isFeatured(), value, item.isPublished(), item.getImageUrl(), item.getModelScale(), item.getModelPlacement(),
+                item.getNameUr(), item.getDescriptionUr(), item.getNameAr(), item.getDescriptionAr());
+        MenuItem saved = items.save(item);
+        snapshots.updateSnapshot(saved.getRestaurantId());
+        return Mappers.item(saved);
     }
 
     @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ItemDto uploadImage(@PathVariable UUID id, @RequestParam("file") MultipartFile file) throws IOException {
         MenuItem item = owned(id);
-        String url = storage.saveImage(file);
+        String url = storage.saveItemImage(item.getRestaurantId(), item.getId(), file);
         String old = item.getImageUrl();
         item.setImageUrl(url);
         MenuItem saved = items.save(item);
         storage.deleteQuietly(old);
+        snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);
     }
 
     @PostMapping(value = "/{id}/model", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ItemDto uploadModel(@PathVariable UUID id, @RequestParam("file") MultipartFile file) throws IOException {
         MenuItem item = owned(id);
-        String url = storage.saveModel(file);
+        String url = storage.saveItemModel(item.getRestaurantId(), item.getId(), file);
         String old = item.getModelUrl();
         item.setModel(url, displayName(file.getOriginalFilename()));
         MenuItem saved = items.save(item);
         storage.deleteQuietly(old);
+        snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);
     }
 
@@ -99,6 +119,7 @@ public class MenuItemController {
         item.setModel(null, null);
         MenuItem saved = items.save(item);
         storage.deleteQuietly(old);
+        snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);
     }
 
@@ -113,7 +134,9 @@ public class MenuItemController {
         if (placement != null && !placement.isBlank()) {
             item.setModelPlacement(placement.trim());
         }
-        return Mappers.item(items.save(item));
+        MenuItem saved = items.save(item);
+        snapshots.updateSnapshot(saved.getRestaurantId());
+        return Mappers.item(saved);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -136,7 +159,11 @@ public class MenuItemController {
                 req.published() == null || req.published(),
                 cleanImageUrl(req.imageUrl(), item.getImageUrl()),
                 req.modelScale() != null ? req.modelScale() : (item.getModelScale() != null ? item.getModelScale() : 1.0),
-                req.modelPlacement() != null ? req.modelPlacement() : (item.getModelPlacement() != null ? item.getModelPlacement() : "plate"));
+                req.modelPlacement() != null ? req.modelPlacement() : (item.getModelPlacement() != null ? item.getModelPlacement() : "plate"),
+                blankToNull(req.nameUr()),
+                blankToNull(req.descriptionUr()),
+                blankToNull(req.nameAr()),
+                blankToNull(req.descriptionAr()));
     }
 
     /**

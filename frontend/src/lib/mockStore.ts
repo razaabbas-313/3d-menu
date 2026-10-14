@@ -23,15 +23,21 @@ const INITIAL_RESTAURANT: Restaurant = {
   googleMapsUrl: 'https://maps.google.com',
   wifiName: 'GrandBistro_Guest_5G',
   wifiPassword: 'gourmetdining',
-  theme: 'dark'
+  theme: 'dark',
+  whatsappOrderEnabled: true,
+  whatsappMessageTemplate: 'Hello, I would like to order {dish} for Table {table}.'
 };
 
 const INITIAL_ITEMS: Item[] = [
   {
     id: 'item-1',
     name: 'The Truffle Royale Burger',
+    nameUr: 'دی ٹرفل رائل برگر',
+    nameAr: 'برغر ذا ترافل رويال',
     category: 'Signatures',
     description: 'Dry-aged wagyu beef, black summer truffle emulsion, aged cheddar, butter-toasted artisan brioche.',
+    descriptionUr: 'خشک بیف، بلیک سمر ٹرفل ایمولشن، ایجڈ چیڈر، مکھن سے ٹوسٹ شدہ بروش بن۔',
+    descriptionAr: 'لحم واغيو معتق، مستحلب الترافل الأسود، جبن شيدر معتق، وخبز بريوش محمص بالزبدة.',
     price: 32,
     imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
     modelUrl: '/models/avocado.glb',
@@ -277,6 +283,15 @@ class MockStore {
     this.saveItems(items);
   }
 
+  toggleAvailable(id: string, available: boolean): Item {
+    const items = this.getItems();
+    const idx = items.findIndex((i) => i.id === id);
+    if (idx === -1) throw new Error('Dish not found');
+    items[idx].available = available;
+    this.saveItems(items);
+    return items[idx];
+  }
+
   uploadItemImage(id: string, file: File): Item {
     const url = URL.createObjectURL(file);
     persistFile(`img_${id}`, file);
@@ -332,6 +347,105 @@ class MockStore {
 
 
   getPublicMenu(slug: string): PublicMenu {
+    if (slug === 'demo') {
+      return {
+        restaurant: {
+          name: 'Le Petit Bistro 3D',
+          slug: 'demo',
+          tagline: 'Experience our signature culinary creations in interactive 3D and table-top Augmented Reality.',
+          city: 'London & Dubai',
+          currency: 'USD',
+          accent: 'cobalt',
+          coverUrl: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+          instagram: '@lepetitbistro3d',
+          whatsapp: '+1234567890',
+          phone: '+1 (555) 234-5678',
+          tiktok: '@lepetitbistro3d',
+          facebook: 'https://facebook.com',
+          website: 'https://lepetitbistro.com',
+          googleMapsUrl: 'https://maps.google.com',
+          wifiName: 'Bistro_Guest_WiFi',
+          wifiPassword: 'bistrogourmet',
+          theme: 'dark',
+          whatsappOrderEnabled: true,
+          whatsappMessageTemplate: 'Hello, I would like to order {dish} for Table {table}.'
+        },
+        items: [
+          {
+            id: 'demo-item-1',
+            name: 'The Truffle Royale Burger',
+            nameUr: 'دی ٹرفل رائل برگر',
+            nameAr: 'برغر ذا ترافل رويال',
+            category: 'Signatures',
+            description: 'Dry-aged wagyu beef, black summer truffle emulsion, aged cheddar, butter-toasted artisan brioche.',
+            descriptionUr: 'خشک بیف، بلیک سمر ٹرفل ایمولشن، ایجڈ چیڈر، مکھن سے ٹوسٹ شدہ بروش بن۔',
+            descriptionAr: 'لحم واغيو معتق، مستحلب الترافل الأسود، جبن شيدر معتق، وخبز بريوش محمص بالزبدة.',
+            price: 32,
+            imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800&q=80',
+            modelUrl: '/models/avocado.glb',
+            tags: 'Halal,Chef Special',
+            featured: true,
+            available: true,
+            modelScale: 1.0,
+            modelPlacement: 'plate'
+          },
+          {
+            id: 'demo-item-2',
+            name: 'Heirloom Burrata Garden',
+            nameUr: 'بوراٹا گارڈن',
+            nameAr: 'حديقة البوراتا',
+            category: 'Starters',
+            description: 'Creamy pugliese burrata, vine-ripened heirloom tomatoes, cold-pressed basil oil, warm focaccia.',
+            descriptionUr: 'کریمی بوراٹا، ٹماٹر، تلسی کا تیل اور گرم سوورڈو۔',
+            descriptionAr: 'جبنة بوراتا كريمية، طماطم، زيت الريحان وخبز العجين المخمر.',
+            price: 22,
+            imageUrl: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?auto=format&fit=crop&w=800&q=80',
+            modelUrl: null,
+            tags: 'Vegetarian',
+            featured: false,
+            available: true,
+            modelScale: 1.0,
+            modelPlacement: 'plate'
+          },
+          {
+            id: 'demo-item-3',
+            name: 'Saffron Sea Bass',
+            nameUr: 'زعفران سی باس',
+            nameAr: 'سمك القاروص بالزعفران',
+            category: 'Mains',
+            description: 'Pan-seared Chilean sea bass, saffron emulsion, charred broccolini, confit fingerling potatoes.',
+            descriptionUr: 'پین فرائیڈ سی باس، زعفرانی ساس اور تازہ سبزیاں۔',
+            descriptionAr: 'سمك القاروص المحمر، صلصة الزبدة بالزعفران والخضار الموسمية.',
+            price: 44,
+            imageUrl: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80',
+            modelUrl: null,
+            tags: 'Halal,Gluten-free',
+            featured: true,
+            available: true,
+            modelScale: 1.0,
+            modelPlacement: 'plate'
+          },
+          {
+            id: 'demo-item-4',
+            name: 'Midnight Tiramisu',
+            nameUr: 'مڈ نائٹ تیرامیسو',
+            nameAr: 'تيراميسو منتصف الليل',
+            category: 'Desserts',
+            description: 'Savoiardi ladyfingers soaked in dark roast espresso, light mascarpone cream, Valrhona cocoa.',
+            descriptionUr: 'ایسپریسو، مسکارپون چیز اور ڈارک کوکو۔',
+            descriptionAr: 'بسكويت مشبع بالإسبريسو، جبنة ماسكاربوني، وكاكاو داكن.',
+            price: 15,
+            imageUrl: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=800&q=80',
+            modelUrl: null,
+            tags: 'Vegetarian',
+            featured: false,
+            available: true,
+            modelScale: 1.0,
+            modelPlacement: 'plate'
+          }
+        ]
+      };
+    }
     const rest = this.getRestaurant();
     const items = this.getItems().filter((i) => i.published);
     return {

@@ -1,0 +1,20 @@
+# Cloudflare Pages Caching & Security Headers
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: model/gltf-binary
+  Access-Control-Allow-Origin: *
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/manifest.json
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

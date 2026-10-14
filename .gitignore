@@ -7,6 +7,8 @@ target/
 .idea/
 .vscode/
 backend/data/
+data/
+*.mv.db
 backend/uploads/
 frontend/mock-api/.uploads/
 *.tsbuildinfo

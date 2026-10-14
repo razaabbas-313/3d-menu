@@ -1701,6 +1701,52 @@
   }
 }
 
+.share-table-selector {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--surface-card, #121722);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
+  text-align: left;
+}
+
+.share-table-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.share-table-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.share-table-chip {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.share-table-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.share-table-chip.active {
+  background: var(--accent, #6366f1);
+  color: #fff;
+  border-color: var(--accent, #6366f1);
+}
+
 /* ---------- print ---------- */
 @media print {
   body { background: #fff; }
@@ -1708,6 +1754,7 @@
   .print-card, .print-card * { visibility: visible; }
   .print-card { display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; position: fixed; inset: 0; padding: 12mm; justify-content: center; background: #fff; }
   .print-card h2 { font-size: 40px; }
+  .print-table-badge { font-size: 26px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #111; padding: 6px 20px; border: 2.5px solid #111; border-radius: 10px; margin: 6px 0; }
   .print-card p { font-size: 18px; max-width: 28ch; color: #333; }
 }
 

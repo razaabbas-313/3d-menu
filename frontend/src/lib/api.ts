@@ -22,6 +22,8 @@ export type Restaurant = {
   wifiName: string | null;
   wifiPassword: string | null;
   theme: string | null;
+  whatsappOrderEnabled?: boolean;
+  whatsappMessageTemplate?: string | null;
 };
 
 export type Item = {
@@ -40,6 +42,10 @@ export type Item = {
   createdAt: string;
   modelScale: number | null;
   modelPlacement: string | null;
+  nameUr?: string | null;
+  descriptionUr?: string | null;
+  nameAr?: string | null;
+  descriptionAr?: string | null;
 };
 
 export type ItemInput = {
@@ -54,6 +60,10 @@ export type ItemInput = {
   imageUrl: string | null;
   modelScale?: number | null;
   modelPlacement?: string | null;
+  nameUr?: string | null;
+  descriptionUr?: string | null;
+  nameAr?: string | null;
+  descriptionAr?: string | null;
 };
 
 export type PublicRestaurant = Pick<
@@ -75,7 +85,11 @@ export type PublicRestaurant = Pick<
   | 'wifiName'
   | 'wifiPassword'
   | 'theme'
->;
+> & {
+  whatsappOrderEnabled?: boolean;
+  whatsappMessageTemplate?: string | null;
+};
+
 export type PublicItem = Pick<
   Item,
   | 'id'
@@ -90,7 +104,21 @@ export type PublicItem = Pick<
   | 'available'
   | 'modelScale'
   | 'modelPlacement'
->;
+> & {
+  nameUr?: string | null;
+  descriptionUr?: string | null;
+  nameAr?: string | null;
+  descriptionAr?: string | null;
+};
+
+export type LeadInquiryInput = {
+  name: string;
+  restaurantName: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+};
+
 export type PublicMenu = { restaurant: PublicRestaurant; items: PublicItem[] };
 
 export type Delta = { current: number; previous: number };
@@ -114,7 +142,7 @@ export class ApiError extends Error {
   }
 }
 
-const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+const BASE = (import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const TOKEN_KEY = 'atelier.token';
 
 let token: string | null = null;
@@ -283,6 +311,8 @@ export const api = {
     wifiName?: string;
     wifiPassword?: string;
     theme?: string;
+    whatsappOrderEnabled?: boolean;
+    whatsappMessageTemplate?: string;
   }) => {
     try {
       return await request<Restaurant>('/restaurant', json('PUT', b));
@@ -393,22 +423,98 @@ export const api = {
   },
 
   // public (no auth header)
-  publicMenu: async (slug: string) => {
+  publicMenu: async (slug: string): Promise<PublicMenu> => {
+    const assetBase = (import.meta.env.VITE_ASSET_BASE_URL || '').replace(/\/$/, '');
+    const snapshotUrl = `${assetBase}/public/${encodeURIComponent(slug)}/menu.json`;
+
+    // 1. Try static S3 / CDN snapshot first (zero wait for sleeping free-tier servers)
     try {
-      return await request<PublicMenu>(`/public/menu/${encodeURIComponent(slug)}`, {}, { publicCall: true });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(snapshotUrl, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+        cache: 'default'
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.restaurant && Array.isArray(data.items)) {
+          try {
+            localStorage.setItem(`atelier.snapshot.${slug}`, JSON.stringify(data));
+          } catch {}
+          return data as PublicMenu;
+        }
+      }
     } catch {
+      // Snapshot fetch failed or timed out, fallback to live API
+    }
+
+    // 2. Fall back to live API endpoint
+    try {
+      const data = await request<PublicMenu>(`/public/menu/${encodeURIComponent(slug)}`, {}, { publicCall: true });
+      try {
+        localStorage.setItem(`atelier.snapshot.${slug}`, JSON.stringify(data));
+      } catch {}
+      return data;
+    } catch (e) {
+      // 3. Fall back to cached local snapshot
+      try {
+        const cached = localStorage.getItem(`atelier.snapshot.${slug}`);
+        if (cached) return JSON.parse(cached) as PublicMenu;
+      } catch {}
+      // 4. Fall back to mock store
       return mockStore.getPublicMenu(slug);
     }
   },
+
   track: async (slug: string, type: EventType, itemId?: string) => {
+    const endpoint = `${BASE}/api/v1/public/menu/${encodeURIComponent(slug)}/events`;
+    const payload = JSON.stringify({ type, itemId });
+
+    // Use sendBeacon for non-blocking fire-and-forget transmission
+    if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+      try {
+        const blob = new Blob([payload], { type: 'application/json' });
+        const sent = navigator.sendBeacon(endpoint, blob);
+        if (sent) return;
+      } catch {}
+    }
+
+    // Fall back to fetch with keepalive
     try {
-      return await request<void>(
-        `/public/menu/${encodeURIComponent(slug)}/events`,
-        { ...json('POST', { type, itemId }), keepalive: true },
-        { publicCall: true }
-      );
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true
+      });
+    } catch {
+      // Enqueue locally to retry when network is back or server wakes up
+      try {
+        const queueKey = 'atelier.analytics_queue';
+        const raw = localStorage.getItem(queueKey);
+        const queue = raw ? JSON.parse(raw) : [];
+        queue.push({ slug, type, itemId, timestamp: Date.now() });
+        if (queue.length > 50) queue.shift();
+        localStorage.setItem(queueKey, JSON.stringify(queue));
+      } catch {}
+    }
+  },
+
+  submitLead: async (data: LeadInquiryInput) => {
+    try {
+      return await request<void>('/public/leads', json('POST', data), { publicCall: true });
     } catch {
       return undefined;
+    }
+  },
+
+  toggleAvailable: async (id: string, value: boolean) => {
+    try {
+      return await request<Item>(`/items/${id}/available?value=${value}`, { method: 'PATCH' });
+    } catch {
+      return mockStore.toggleAvailable(id, value);
     }
   }
 };

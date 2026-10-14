@@ -204,6 +204,8 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
   const [order, setOrder] = useState<Record<string, OrderEntry>>({});
   const [orderOpen, setOrderOpen] = useState(false);
   const [tableNumber, setTableNumber] = useState(() => {
+    const fromUrl = search.get('table');
+    if (fromUrl) return fromUrl;
     try {
       return localStorage.getItem(`atelier.table.${slug || 'menu'}`) || '';
     } catch {
@@ -213,6 +215,14 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
   const [orderNotes, setOrderNotes] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
   const [splitGuests, setSplitGuests] = useState(1);
+
+  // Sync with URL query parameter ?table=X
+  useEffect(() => {
+    const fromUrl = search.get('table');
+    if (fromUrl) {
+      setTableNumber(fromUrl);
+    }
+  }, [search]);
 
   // Remember table number in storage
   useEffect(() => {
@@ -389,6 +399,18 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
 
+  // Direct single-dish WhatsApp order pre-filled with dish name and table number
+  const orderDishWhatsApp = (dish: PublicItem) => {
+    if (!restaurant.whatsapp) return;
+    const phone = cleanPhone(restaurant.whatsapp);
+    const tbl = tableNumber.trim() ? tableNumber.trim() : 'Guest';
+    const template =
+      restaurant.whatsappMessageTemplate || 'Hello, I would like to order {dish} for Table {table}.';
+    const msg = template.replace(/\{dish\}/g, dish.name).replace(/\{table\}/g, tbl);
+    const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
   // Quick Table Service Request message via WhatsApp
   const sendServiceRequest = (serviceType: string) => {
     if (!restaurant.whatsapp) {
@@ -521,6 +543,36 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
             </div>
           </div>
         </header>
+
+        {/* Interactive Demo Call to Action Banner */}
+        {slug === 'demo' && (
+          <div className="demo-cta-card">
+            <div className="demo-cta-glow" />
+            <div className="demo-cta-badge">
+              <Sparkles size={14} />
+              <span>Interactive 3D Demo</span>
+            </div>
+            <h2 className="demo-cta-title">See food on your dining table in Augmented Reality</h2>
+            <p className="demo-cta-desc">
+              Tap any 3D dish below to rotate 360°, inspect real kitchen portions, and place it directly on your table via your phone camera. No app required.
+            </p>
+            <div className="demo-cta-actions">
+              <Button
+                variant="primary"
+                icon={<Box size={16} />}
+                onClick={() => {
+                  const dishWith3d = items.find((i) => i.modelUrl);
+                  if (dishWith3d) open(dishWith3d);
+                }}
+              >
+                Try this on your table (AR)
+              </Button>
+              <a href="/app" className="demo-cta-secondary-link">
+                Build your free 3D menu &rarr;
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Sticky Search & Navigation Bar */}
         <div className="g-bar">
@@ -659,6 +711,20 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                             <div className="g-feature-foot" onClick={(e) => e.stopPropagation()}>
                               <b className="g-feature-price">{money(i.price, cur)}</b>
                               <div className="g-feature-order-ctrl">
+                                {restaurant.whatsapp && restaurant.whatsappOrderEnabled !== false && i.available && (
+                                  <button
+                                    type="button"
+                                    className="btn-row-whatsapp"
+                                    title="Order via WhatsApp"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      orderDishWhatsApp(i);
+                                    }}
+                                    aria-label={`Order ${i.name} via WhatsApp`}
+                                  >
+                                    <MessageCircle size={14} />
+                                  </button>
+                                )}
                                 {inOrder ? (
                                     <div className="order-counter">
                                       <button
@@ -686,8 +752,8 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                                         onClick={(e) => addToOrder(i, e)}
                                         disabled={!i.available}
                                     >
-                                      <Plus size={14} />
-                                      <span>Add</span>
+                                        <Plus size={14} />
+                                        <span>Add</span>
                                     </button>
                                 )}
                               </div>
@@ -767,6 +833,20 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                               </div>
 
                               <div className="g-row-order-ctrl">
+                                {restaurant.whatsapp && restaurant.whatsappOrderEnabled !== false && i.available && (
+                                  <button
+                                    type="button"
+                                    className="btn-row-whatsapp"
+                                    title="Order via WhatsApp"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      orderDishWhatsApp(i);
+                                    }}
+                                    aria-label={`Order ${i.name} via WhatsApp`}
+                                  >
+                                    <MessageCircle size={14} />
+                                  </button>
+                                )}
                                 {inOrder ? (
                                     <div className="order-counter">
                                       <button
@@ -872,6 +952,8 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
             allItems={items}
             orderedIds={Object.keys(order)}
             currency={cur}
+            whatsappOrderEnabled={Boolean(restaurant.whatsapp && restaurant.whatsappOrderEnabled !== false)}
+            onOrderWhatsApp={orderDishWhatsApp}
             onClose={() => setSelected(null)}
             onModelView={(id) => track('MODEL_VIEW', id)}
             onAr={(id) => track('AR_LAUNCH', id)}
@@ -1257,6 +1339,8 @@ function DishSheet({
                      allItems,
                      orderedIds,
                      currency,
+                     whatsappOrderEnabled,
+                     onOrderWhatsApp,
                      onClose,
                      onModelView,
                      onAr,
@@ -1266,6 +1350,8 @@ function DishSheet({
   allItems: PublicItem[];
   orderedIds: string[];
   currency: string;
+  whatsappOrderEnabled?: boolean;
+  onOrderWhatsApp?: (item: PublicItem) => void;
   onClose: () => void;
   onModelView: (id: string) => void;
   onAr: (id: string) => void;
@@ -1448,18 +1534,34 @@ function DishSheet({
 
               {/* Sticky Bottom Ordering Action Bar */}
               <div className="sheet-sticky-footer">
-                <Button
-                    variant="primary"
-                    className="btn-sheet-order"
-                    icon={<ShoppingBag size={18} />}
-                    disabled={!shown.available}
-                    onClick={() => {
-                      onAddToOrder(shown);
-                      onClose();
-                    }}
-                >
-                  Add to Table Order · {money(shown.price, currency)}
-                </Button>
+                <div className="sheet-footer-actions">
+                  <Button
+                      variant="primary"
+                      className="btn-sheet-order"
+                      icon={<ShoppingBag size={18} />}
+                      disabled={!shown.available}
+                      onClick={() => {
+                        onAddToOrder(shown);
+                        onClose();
+                      }}
+                  >
+                    Add to Table Order · {money(shown.price, currency)}
+                  </Button>
+                  {whatsappOrderEnabled && onOrderWhatsApp && (
+                    <button
+                      type="button"
+                      className="btn-sheet-whatsapp"
+                      disabled={!shown.available}
+                      onClick={() => {
+                        onOrderWhatsApp(shown);
+                        onClose();
+                      }}
+                    >
+                      <MessageCircle size={17} />
+                      <span>Order via WhatsApp</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
         )}

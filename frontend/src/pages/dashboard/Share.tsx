@@ -13,10 +13,16 @@ export function Share() {
   const menu = useMenu();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [tableNumber, setTableNumber] = useState('');
   if (!restaurant) return null;
 
-  const url = publicMenuUrl(restaurant.slug);
-  const fileBase = `${restaurant.slug}-menu-qr`;
+  const baseUrl = publicMenuUrl(restaurant.slug);
+  const url = tableNumber.trim()
+    ? `${baseUrl}?table=${encodeURIComponent(tableNumber.trim())}`
+    : baseUrl;
+  const fileBase = tableNumber.trim()
+    ? `${restaurant.slug}-table-${tableNumber.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}-qr`
+    : `${restaurant.slug}-menu-qr`;
 
   async function setPublished(value: boolean) {
     setBusy(true);
@@ -33,7 +39,7 @@ export function Share() {
   async function copy() {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Link copied.');
+      toast.success(tableNumber.trim() ? `Table ${tableNumber} link copied.` : 'General menu link copied.');
     } catch {
       toast.error('Could not copy automatically. Select the link and copy it manually.');
     }
@@ -41,11 +47,64 @@ export function Share() {
 
   return (
     <>
-      <PageHeader title="QR and sharing" subtitle="One code for every table. It always points to your latest menu." />
+      <PageHeader
+        title="QR and sharing"
+        subtitle="Generate general or table-specific QR codes with instant WhatsApp order routing."
+      />
       <div className="share">
         <section className="panel qr-panel">
+          <div className="share-table-selector">
+            <div className="share-table-head">
+              <label htmlFor="table-num-input">
+                <strong>Table-Specific QR Code (Optional)</strong>
+              </label>
+              <span className="muted" style={{ fontSize: '13px' }}>
+                Pre-fills table number for WhatsApp orders & waiter requests
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <input
+                id="table-num-input"
+                className="input"
+                style={{ maxWidth: '160px' }}
+                placeholder="e.g. 5 or VIP-1"
+                value={tableNumber}
+                onChange={(e) => setTableNumber(e.target.value)}
+              />
+              {tableNumber && (
+                <Button size="sm" variant="ghost" onClick={() => setTableNumber('')}>
+                  Clear (All Tables)
+                </Button>
+              )}
+            </div>
+            <div className="share-table-chips">
+              <button
+                type="button"
+                className={`share-table-chip ${!tableNumber ? 'active' : ''}`}
+                onClick={() => setTableNumber('')}
+              >
+                All Tables
+              </button>
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  className={`share-table-chip ${tableNumber === num ? 'active' : ''}`}
+                  onClick={() => setTableNumber(num)}
+                >
+                  Table {num}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="qr-box">
             <QrCode value={url} size={260} />
+            {tableNumber.trim() && (
+              <div style={{ marginTop: '10px', fontWeight: 600, fontSize: '14px', color: 'var(--accent)' }}>
+                📍 Routing to Table {tableNumber.trim()}
+              </div>
+            )}
           </div>
           <div className="link-row">
             <input className="input" readOnly value={url} aria-label="Public menu link" onFocus={(e) => e.currentTarget.select()} />
@@ -98,6 +157,7 @@ export function Share() {
       <div className="print-card" aria-hidden>
         <Logo size={44} />
         <h2>{restaurant.name}</h2>
+        {tableNumber.trim() && <div className="print-table-badge">Table {tableNumber.trim()}</div>}
         <p>Scan to see our menu. Many dishes can be viewed in 3D and on your table.</p>
         <QrCode value={url} size={320} />
         <small>{url}</small>

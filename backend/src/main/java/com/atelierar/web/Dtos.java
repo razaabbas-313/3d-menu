@@ -37,7 +37,8 @@ public final class Dtos {
     public record RestaurantDto(String id, String name, String slug, String tagline, String city, String currency,
                                 String accent, String coverUrl, boolean published,
                                 String instagram, String whatsapp, String phone, String tiktok, String facebook,
-                                String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme) {
+                                String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme,
+                                boolean whatsappOrderEnabled, String whatsappMessageTemplate) {
     }
 
     public record RestaurantUpdate(
@@ -56,7 +57,9 @@ public final class Dtos {
             @Size(max = 500) String googleMapsUrl,
             @Size(max = 100) String wifiName,
             @Size(max = 100) String wifiPassword,
-            @Size(max = 30) String theme) {
+            @Size(max = 30) String theme,
+            Boolean whatsappOrderEnabled,
+            @Size(max = 500) String whatsappMessageTemplate) {
     }
 
     // ---- menu items ----
@@ -71,31 +74,50 @@ public final class Dtos {
             Boolean published,
             @Size(max = 500) String imageUrl,
             Double modelScale,
-            String modelPlacement) {
+            String modelPlacement,
+            @Size(max = 140) String nameUr,
+            @Size(max = 700) String descriptionUr,
+            @Size(max = 140) String nameAr,
+            @Size(max = 700) String descriptionAr) {
     }
 
     public record ItemDto(String id, String name, String category, String description, BigDecimal price,
                           String imageUrl, String modelUrl, String modelFileName, String tags,
                           boolean featured, boolean available, boolean published, Instant createdAt,
-                          Double modelScale, String modelPlacement) {
+                          Double modelScale, String modelPlacement,
+                          String nameUr, String descriptionUr, String nameAr, String descriptionAr) {
     }
 
     // ---- public menu ----
     public record PublicRestaurantDto(String name, String slug, String tagline, String city, String currency,
                                       String accent, String coverUrl,
                                       String instagram, String whatsapp, String phone, String tiktok, String facebook,
-                                      String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme) {
+                                      String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme,
+                                      boolean whatsappOrderEnabled, String whatsappMessageTemplate) {
     }
 
     public record PublicItemDto(String id, String name, String category, String description, BigDecimal price,
                                 String imageUrl, String modelUrl, String tags, boolean featured, boolean available,
-                                Double modelScale, String modelPlacement) {
+                                Double modelScale, String modelPlacement,
+                                String nameUr, String descriptionUr, String nameAr, String descriptionAr) {
     }
 
     public record PublicMenuDto(PublicRestaurantDto restaurant, List<PublicItemDto> items) {
     }
 
     public record EventRequest(@NotNull EventType type, UUID itemId) {
+    }
+
+    // ---- leads ----
+    public record LeadInquiryRequest(
+            @NotBlank @Size(max = 120) String name,
+            @NotBlank @Size(max = 140) String restaurantName,
+            @NotBlank @Size(max = 60) String phone,
+            @Size(max = 160) String email,
+            @Size(max = 500) String notes) {
+    }
+
+    public record LeadInquiryDto(String id, String name, String restaurantName, String phone, String email, String notes, Instant createdAt) {
     }
 
     // ---- analytics ----

@@ -5,6 +5,7 @@ import {
   ExternalLink,
   ImagePlus,
   LogOut,
+  MessageSquare,
   Palette,
   Save,
   Share2,
@@ -18,7 +19,7 @@ import { useAuth } from '../../lib/auth';
 import { CURRENCIES, initials } from '../../lib/format';
 import { ACCENTS, accentStyle } from '../../lib/theme';
 import { errorMessage, useToast } from '../../lib/toast';
-import { Button, CustomSelect, Field, Input, Textarea } from '../../components/ui';
+import { Button, CustomSelect, Field, Input, Switch, Textarea } from '../../components/ui';
 import { PageHeader } from './Shell';
 
 export function SettingsPage() {
@@ -40,6 +41,10 @@ export function SettingsPage() {
   const [wifiName, setWifiName] = useState(restaurant?.wifiName ?? '');
   const [wifiPassword, setWifiPassword] = useState(restaurant?.wifiPassword ?? '');
   const [theme, setTheme] = useState(restaurant?.theme ?? 'dark');
+  const [whatsappOrderEnabled, setWhatsappOrderEnabled] = useState(restaurant?.whatsappOrderEnabled ?? true);
+  const [whatsappMessageTemplate, setWhatsappMessageTemplate] = useState(
+    restaurant?.whatsappMessageTemplate ?? 'Hello, I would like to order {dish} for Table {table}.'
+  );
   const [saving, setSaving] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
   const [error, setError] = useState('');
@@ -64,7 +69,9 @@ export function SettingsPage() {
     googleMapsUrl !== (restaurant.googleMapsUrl ?? '') ||
     wifiName !== (restaurant.wifiName ?? '') ||
     wifiPassword !== (restaurant.wifiPassword ?? '') ||
-    theme !== (restaurant.theme ?? 'dark');
+    theme !== (restaurant.theme ?? 'dark') ||
+    whatsappOrderEnabled !== (restaurant.whatsappOrderEnabled ?? true) ||
+    whatsappMessageTemplate !== (restaurant.whatsappMessageTemplate ?? 'Hello, I would like to order {dish} for Table {table}.');
 
   const syncSlugFromName = () => {
     const candidate = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'restaurant';
@@ -106,7 +113,9 @@ export function SettingsPage() {
           googleMapsUrl: googleMapsUrl.trim(),
           wifiName: wifiName.trim(),
           wifiPassword: wifiPassword.trim(),
-          theme
+          theme,
+          whatsappOrderEnabled,
+          whatsappMessageTemplate: whatsappMessageTemplate.trim()
         })
       );
       toast.success('Settings and menu URL saved successfully.');
@@ -311,7 +320,54 @@ export function SettingsPage() {
 
           <hr className="divider" />
 
-          {/* Section 3: Social Media & Free Marketing */}
+          {/* Section 3: WhatsApp Direct Ordering & Table Service */}
+          <div className="settings-section-head">
+            <div className="settings-section-icon">
+              <MessageSquare size={18} />
+            </div>
+            <div className="settings-section-titles">
+              <h2>WhatsApp Direct Ordering & Table Service</h2>
+              <p>Allow guests to order individual dishes directly to your WhatsApp with pre-filled table details</p>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <Switch
+              checked={whatsappOrderEnabled}
+              onChange={setWhatsappOrderEnabled}
+              label="Enable WhatsApp Order Buttons"
+              description="Displays an 'Order via WhatsApp' button on every dish and inside the 3D presentation modal."
+            />
+          </div>
+
+          <div className="form-row">
+            <Field
+              label="WhatsApp Phone Number"
+              hint="Country code followed by digits, e.g. +923001234567 or 15551234567 (orders and waiter calls are sent here)"
+            >
+              <Input
+                value={whatsapp}
+                onChange={(e) => setWhatsapp(e.target.value)}
+                placeholder="+923001234567"
+                maxLength={60}
+              />
+            </Field>
+            <Field
+              label="Dish Order Message Template"
+              hint="Placeholders: {dish} and {table}. Table number is auto-filled from the QR code (?table=X)."
+            >
+              <Input
+                value={whatsappMessageTemplate}
+                onChange={(e) => setWhatsappMessageTemplate(e.target.value)}
+                placeholder="Hello, I would like to order {dish} for Table {table}."
+                maxLength={500}
+              />
+            </Field>
+          </div>
+
+          <hr className="divider" />
+
+          {/* Section 4: Social Media & Free Marketing */}
           <div className="settings-section-head">
             <div className="settings-section-icon">
               <Share2 size={18} />
@@ -326,8 +382,8 @@ export function SettingsPage() {
             <Field label="Instagram handle or link" hint="e.g. @thegrandbistro or instagram.com/thegrandbistro">
               <Input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@thegrandbistro" maxLength={120} />
             </Field>
-            <Field label="WhatsApp (Orders & Assistance)" hint="e.g. +923001234567 (direct table message link)">
-              <Input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+923001234567" maxLength={60} />
+            <Field label="Phone number (Call Waiter / Front Desk)" hint="e.g. +92 21 35870000">
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+92 21 35870000" maxLength={60} />
             </Field>
           </div>
 

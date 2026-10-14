@@ -68,7 +68,11 @@ export function MenuLibrary() {
 
   async function toggle(item: Item, change: { published?: boolean; available?: boolean }) {
     try {
-      menu.upsert(await api.updateItem(item.id, toInput(item, change)));
+      if (change.available !== undefined) {
+        menu.upsert(await api.toggleAvailable(item.id, change.available));
+      } else {
+        menu.upsert(await api.updateItem(item.id, toInput(item, change)));
+      }
     } catch (e) {
       toast.error(errorMessage(e));
     }

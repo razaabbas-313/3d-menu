@@ -1,0 +1,26 @@
+[
+  {
+    "AllowedHeaders": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "HEAD"
+    ],
+    "AllowedOrigins": [
+      "https://*.pages.dev",
+      "https://*.vercel.app",
+      "https://*.cloudfront.net",
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173"
+    ],
+    "ExposeHeaders": [
+      "ETag",
+      "Content-Length",
+      "Content-Type",
+      "Cache-Control"
+    ],
+    "MaxAgeSeconds": 3600
+  }
+]

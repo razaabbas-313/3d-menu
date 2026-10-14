@@ -25,13 +25,16 @@ public class RestaurantController {
     private final RestaurantRepository restaurants;
     private final MenuItemRepository items;
     private final StorageService storage;
+    private final com.atelierar.publicapi.PublicMenuSnapshotService snapshots;
 
     public RestaurantController(RestaurantService service, RestaurantRepository restaurants,
-                                MenuItemRepository items, StorageService storage) {
+                                MenuItemRepository items, StorageService storage,
+                                com.atelierar.publicapi.PublicMenuSnapshotService snapshots) {
         this.service = service;
         this.restaurants = restaurants;
         this.items = items;
         this.storage = storage;
+        this.snapshots = snapshots;
     }
 
     @GetMapping
@@ -68,9 +71,13 @@ public class RestaurantController {
                 blankToNull(req.googleMapsUrl()),
                 blankToNull(req.wifiName()),
                 blankToNull(req.wifiPassword()),
-                req.theme() != null ? req.theme() : "dark"
+                req.theme() != null ? req.theme() : "dark",
+                req.whatsappOrderEnabled() != null ? req.whatsappOrderEnabled() : true,
+                blankToNull(req.whatsappMessageTemplate())
         );
-        return Mappers.restaurant(restaurants.save(r));
+        Restaurant saved = restaurants.save(r);
+        snapshots.updateSnapshot(saved.getId());
+        return Mappers.restaurant(saved);
     }
 
     @PatchMapping("/publish")
@@ -80,17 +87,20 @@ public class RestaurantController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one dish before publishing your menu.");
         }
         r.setPublished(value);
-        return Mappers.restaurant(restaurants.save(r));
+        Restaurant saved = restaurants.save(r);
+        snapshots.updateSnapshot(saved.getId());
+        return Mappers.restaurant(saved);
     }
 
     @PostMapping(value = "/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public RestaurantDto uploadCover(@RequestParam("file") MultipartFile file) throws IOException {
         Restaurant r = service.current();
-        String newUrl = storage.saveImage(file);
+        String newUrl = storage.saveCoverImage(r.getId(), file);
         String old = r.getCoverUrl();
         r.setCoverUrl(newUrl);
         Restaurant saved = restaurants.save(r);
         storage.deleteQuietly(old);
+        snapshots.updateSnapshot(saved.getId());
         return Mappers.restaurant(saved);
     }
 
@@ -101,6 +111,7 @@ public class RestaurantController {
         r.setCoverUrl(null);
         Restaurant saved = restaurants.save(r);
         storage.deleteQuietly(old);
+        snapshots.updateSnapshot(saved.getId());
         return Mappers.restaurant(saved);
     }
 
@@ -113,6 +124,7 @@ public class RestaurantController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Sample dishes can only be added to an empty menu.");
         }
         List<MenuItem> created = items.saveAll(SampleMenu.build(r.getId()));
+        snapshots.updateSnapshot(r.getId());
         return created.stream().map(Mappers::item).toList();
     }
 

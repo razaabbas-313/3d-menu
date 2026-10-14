@@ -25,6 +25,18 @@ public class MenuItem {
     @Column(length = 700)
     private String description;
 
+    @Column(length = 140)
+    private String nameUr;
+
+    @Column(length = 700)
+    private String descriptionUr;
+
+    @Column(length = 140)
+    private String nameAr;
+
+    @Column(length = 700)
+    private String descriptionAr;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
@@ -72,6 +84,10 @@ public class MenuItem {
     public String getName() { return name; }
     public String getCategory() { return category; }
     public String getDescription() { return description; }
+    public String getNameUr() { return nameUr; }
+    public String getDescriptionUr() { return descriptionUr; }
+    public String getNameAr() { return nameAr; }
+    public String getDescriptionAr() { return descriptionAr; }
     public BigDecimal getPrice() { return price; }
     public String getImageUrl() { return imageUrl; }
     public String getModelUrl() { return modelUrl; }
@@ -88,10 +104,22 @@ public class MenuItem {
     public void setModel(String url, String fileName) { this.modelUrl = url; this.modelFileName = fileName; }
     public void setModelScale(Double modelScale) { this.modelScale = modelScale; }
     public void setModelPlacement(String modelPlacement) { this.modelPlacement = modelPlacement; }
+    public void setNameUr(String nameUr) { this.nameUr = nameUr; }
+    public void setDescriptionUr(String descriptionUr) { this.descriptionUr = descriptionUr; }
+    public void setNameAr(String nameAr) { this.nameAr = nameAr; }
+    public void setDescriptionAr(String descriptionAr) { this.descriptionAr = descriptionAr; }
 
     public void apply(String name, String category, String description, BigDecimal price, String tags,
                       boolean featured, boolean available, boolean published, String imageUrl,
                       Double modelScale, String modelPlacement) {
+        apply(name, category, description, price, tags, featured, available, published, imageUrl,
+                modelScale, modelPlacement, null, null, null, null);
+    }
+
+    public void apply(String name, String category, String description, BigDecimal price, String tags,
+                      boolean featured, boolean available, boolean published, String imageUrl,
+                      Double modelScale, String modelPlacement,
+                      String nameUr, String descriptionUr, String nameAr, String descriptionAr) {
         this.name = name;
         this.category = category;
         this.description = description;
@@ -103,5 +131,9 @@ public class MenuItem {
         this.imageUrl = imageUrl;
         if (modelScale != null) this.modelScale = modelScale;
         if (modelPlacement != null && !modelPlacement.isBlank()) this.modelPlacement = modelPlacement;
+        this.nameUr = nameUr;
+        this.descriptionUr = descriptionUr;
+        this.nameAr = nameAr;
+        this.descriptionAr = descriptionAr;
     }
 }

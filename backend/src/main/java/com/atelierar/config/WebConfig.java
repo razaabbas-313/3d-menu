@@ -19,12 +19,14 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String location = storage.root().toUri().toString();
-        if (!location.endsWith("/")) location += "/";
-        // File names contain a random UUID and are never rewritten, so they can be cached aggressively.
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations(location)
-                .setCacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic());
+        storage.getLocalRoot().ifPresent(path -> {
+            String location = path.toUri().toString();
+            if (!location.endsWith("/")) location += "/";
+            // File names contain a random UUID and are never rewritten, so they can be cached aggressively.
+            registry.addResourceHandler("/uploads/**")
+                    .addResourceLocations(location)
+                    .setCacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic());
+        });
     }
 
     @Override

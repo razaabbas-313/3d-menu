@@ -70,6 +70,12 @@ public class Restaurant {
     @Column(nullable = false)
     private boolean published = false;
 
+    @Column(columnDefinition = "boolean default true")
+    private boolean whatsappOrderEnabled = true;
+
+    @Column(length = 500)
+    private String whatsappMessageTemplate = "Hello, I would like to order {dish} for Table {table}.";
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -103,14 +109,21 @@ public class Restaurant {
     public String getWifiName() { return wifiName; }
     public String getWifiPassword() { return wifiPassword; }
     public String getTheme() { return theme == null ? "dark" : theme; }
+    public boolean isWhatsappOrderEnabled() { return whatsappOrderEnabled; }
+    public String getWhatsappMessageTemplate() {
+        return whatsappMessageTemplate == null ? "Hello, I would like to order {dish} for Table {table}." : whatsappMessageTemplate;
+    }
 
     public void setSlug(String slug) { this.slug = slug; }
     public void setPublished(boolean published) { this.published = published; }
     public void setCoverUrl(String coverUrl) { this.coverUrl = coverUrl; }
+    public void setWhatsappOrderEnabled(boolean whatsappOrderEnabled) { this.whatsappOrderEnabled = whatsappOrderEnabled; }
+    public void setWhatsappMessageTemplate(String template) { this.whatsappMessageTemplate = template; }
 
     public void updateProfile(String name, String slug, String tagline, String city, String currency, String accent,
                               String instagram, String whatsapp, String phone, String tiktok, String facebook,
-                              String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme) {
+                              String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme,
+                              Boolean whatsappOrderEnabled, String whatsappMessageTemplate) {
         this.name = name;
         if (slug != null && !slug.isBlank()) this.slug = slug;
         this.tagline = tagline;
@@ -127,5 +140,7 @@ public class Restaurant {
         this.wifiName = wifiName;
         this.wifiPassword = wifiPassword;
         if (theme != null) this.theme = theme;
+        if (whatsappOrderEnabled != null) this.whatsappOrderEnabled = whatsappOrderEnabled;
+        if (whatsappMessageTemplate != null && !whatsappMessageTemplate.isBlank()) this.whatsappMessageTemplate = whatsappMessageTemplate;
     }
 }
