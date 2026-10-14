@@ -168,10 +168,12 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
               <Chip tone="saffron" icon={<Box size={12} />}>3D Attached</Chip>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <div className="model-pick-actions">
             <input ref={modelInput} type="file" hidden accept=".glb,model/gltf-binary" onChange={(e) => { pickModel(e.target.files?.[0]); e.target.value = ''; }} />
             <Button size="sm" type="button" icon={<Box size={14} />} onClick={() => modelInput.current?.click()}>
-              {modelFile ? modelFile.name : (!removeModel && item?.modelFileName) || (!removeModel && item?.modelUrl ? 'Replace .glb model' : 'Attach 3D model (.glb)')}
+              <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                {modelFile ? modelFile.name : (!removeModel && item?.modelFileName) || (!removeModel && item?.modelUrl ? 'Replace .glb model' : 'Attach 3D model (.glb)')}
+              </span>
             </Button>
             {(modelFile || (!removeModel && item?.modelUrl)) && (
               <Button size="sm" variant="ghost" type="button" icon={<Trash2 size={14} />} onClick={() => { setModelFile(null); setRemoveModel(true); }}>
@@ -184,6 +186,7 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
               </Button>
             )}
           </div>
+
           <span className="field-hint" style={{ margin: 0 }}>
             Upload a .glb 3D asset (up to 25 MB). Guests can view it in 3D and project it life-size on their table in AR.
           </span>

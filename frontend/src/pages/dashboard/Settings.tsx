@@ -282,7 +282,7 @@ export function SettingsPage() {
                 value={theme}
                 onChange={setTheme}
                 options={[
-                  { value: 'dark', label: 'Luxury Obsidian (Dark Dining - Recommended)' },
+                  { value: 'dark', label: 'Luxury Obsidian' },
                   { value: 'light', label: 'Porcelain White (Classic Light)' }
                 ]}
                 ariaLabel="Select Theme"
