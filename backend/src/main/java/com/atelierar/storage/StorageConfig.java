@@ -20,8 +20,8 @@ public class StorageConfig {
             @Value("${app.storage.s3.public-base-url:${S3_PUBLIC_BASE_URL:}}") String publicBaseUrl,
             @Value("${aws.access-key-id:${AWS_ACCESS_KEY_ID:}}") String accessKeyId,
             @Value("${aws.secret-access-key:${AWS_SECRET_ACCESS_KEY:}}") String secretAccessKey,
-            @Value("${app.storage.max-model-mb:15}") long maxModelMb,
-            @Value("${app.storage.quota-mb:100}") long quotaMb) {
+            @Value("${app.storage.max-model-mb:30}") long maxModelMb,
+            @Value("${app.storage.quota-mb:150}") long quotaMb) {
         return new S3StorageService(region, bucket, publicBaseUrl, accessKeyId, secretAccessKey, maxModelMb, quotaMb);
     }
 
@@ -30,8 +30,8 @@ public class StorageConfig {
     @ConditionalOnProperty(name = "app.storage.provider", havingValue = "local", matchIfMissing = true)
     public StorageService localStorageService(
             @Value("${app.storage.dir:uploads}") String dir,
-            @Value("${app.storage.max-model-mb:15}") long maxModelMb,
-            @Value("${app.storage.quota-mb:100}") long quotaMb) throws IOException {
+            @Value("${app.storage.max-model-mb:30}") long maxModelMb,
+            @Value("${app.storage.quota-mb:150}") long quotaMb) throws IOException {
         return new LocalStorageService(dir, maxModelMb, quotaMb);
     }
 }

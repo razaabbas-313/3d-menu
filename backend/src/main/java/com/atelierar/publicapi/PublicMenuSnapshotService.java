@@ -14,10 +14,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Generates and uploads public menu snapshots to S3 or local storage at public/{slug}/menu.json.
  * This ensures guests never experience cold-start delays when scanning QR codes if the backend sleeps.
+ * Operates asynchronously so dish creation and image uploads respond instantaneously without waiting on S3 network I/O.
  */
 @Service
 public class PublicMenuSnapshotService {
@@ -27,6 +30,11 @@ public class PublicMenuSnapshotService {
     private final MenuItemRepository items;
     private final StorageService storage;
     private final ObjectMapper objectMapper;
+    private final ExecutorService snapshotExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "menu-snapshot-worker");
+        t.setDaemon(true);
+        return t;
+    });
 
     public PublicMenuSnapshotService(RestaurantRepository restaurants,
                                      MenuItemRepository items,
@@ -39,16 +47,20 @@ public class PublicMenuSnapshotService {
     }
 
     /**
-     * Re-generates and publishes the public JSON snapshot for the given restaurant.
+     * Asynchronously re-generates and publishes the public JSON snapshot for the given restaurant.
      * If the restaurant is not published, deletes any existing snapshot.
      */
     public void updateSnapshot(UUID restaurantId) {
         if (restaurantId == null) return;
+        snapshotExecutor.submit(() -> doUpdateSnapshot(restaurantId));
+    }
+
+    private void doUpdateSnapshot(UUID restaurantId) {
         try {
             Restaurant r = restaurants.findById(restaurantId).orElse(null);
             if (r == null) return;
             if (!r.isPublished()) {
-                deleteSnapshot(r.getSlug());
+                doDeleteSnapshot(r.getSlug());
                 return;
             }
             List<MenuItem> publishedItems = items.findByRestaurantIdAndPublishedTrueOrderByCategoryAscNameAsc(r.getId());
@@ -59,17 +71,21 @@ public class PublicMenuSnapshotService {
 
             String json = objectMapper.writeValueAsString(snapshot);
             String url = storage.savePublicSnapshot(r.getSlug(), json);
-            log.info("Public menu snapshot updated for '{}' at {}", r.getSlug(), url);
+            log.info("Public menu snapshot updated asynchronously for '{}' at {}", r.getSlug(), url);
         } catch (Exception e) {
             log.error("Failed to generate public menu snapshot for restaurant {}: {}", restaurantId, e.getMessage());
         }
     }
 
     /**
-     * Deletes the public snapshot for the specified slug from storage/CDN.
+     * Asynchronously deletes the public snapshot for the specified slug from storage/CDN.
      */
     public void deleteSnapshot(String slug) {
         if (slug == null || slug.isBlank()) return;
+        snapshotExecutor.submit(() -> doDeleteSnapshot(slug));
+    }
+
+    private void doDeleteSnapshot(String slug) {
         try {
             storage.deletePublicSnapshot(slug);
             log.info("Deleted public menu snapshot for slug '{}'", slug);

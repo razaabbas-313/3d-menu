@@ -215,7 +215,7 @@ async function readError(status: number, text: string): Promise<ApiError> {
       status === 401 ? 'Please sign in again.' :
       status === 403 ? 'The server refused this request (403).' :
       status === 404 ? 'We could not find that.' :
-      status === 413 ? 'That file is too large. Models can be up to 15 MB.' :
+      status === 413 ? 'That file is too large. Models can be up to 30 MB.' :
       status === 429 ? 'Too many requests. Please wait a moment.' :
       status === 502 || status === 503 || status === 504 ? 'The backend server is waking up or temporarily restarting. Please retry in a few seconds.' :
       status >= 500 ? 'The server had a problem. Please try again.' :

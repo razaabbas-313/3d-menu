@@ -41,7 +41,7 @@ public class MenuItemController {
                               com.atelierar.publicapi.PublicMenuSnapshotService snapshots,
                               ModelOptimizationService modelOptimizer,
                               ImageOptimizationService imageOptimizer,
-                              @Value("${app.storage.max-model-mb:15}") long maxModelMb) {
+                              @Value("${app.storage.max-model-mb:30}") long maxModelMb) {
         this.restaurants = restaurants;
         this.items = items;
         this.storage = storage;

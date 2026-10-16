@@ -87,10 +87,10 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
   function pickModel(f: File | undefined) {
     if (!f) return;
     if (!f.name.toLowerCase().endsWith('.glb')) return setError('Choose a 3D model in .glb format.');
-    if (f.size > 25 * 1024 * 1024) return setError('3D model exceeds 25 MB. Choose a smaller one.');
+    if (f.size > 30 * 1024 * 1024) return setError('3D model exceeds 30 MB. Please compress it with gltf.report or choose a smaller one.');
     setError('');
     if (f.size > 15 * 1024 * 1024) {
-      setModelWarning('Notice: This 3D model is over 15 MB. We recommend compressing with gltf-transform (Draco/KTX2) so mobile diners load it in under a second.');
+      setModelWarning('Notice: This 3D model is over 15 MB. It will be uploaded directly to S3 via CloudFront CDN.');
     } else {
       setModelWarning('');
     }
@@ -148,28 +148,51 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
       return;
     }
 
+    // Parallelize image & 3D model uploads concurrently for maximum speed
+    const uploadTasks: Promise<void>[] = [];
+
     if (file) {
-      try {
-        saved = await api.uploadImage(saved.id, file, setProgress);
-      } catch (err) {
-        toast.error(`The dish was saved, but its photo was not: ${errorMessage(err)}`);
-      }
+      uploadTasks.push(
+        api.uploadImage(saved.id, file, setProgress)
+          .then((updated) => {
+            saved = { ...saved, imageUrl: updated.imageUrl, thumbnailUrl: updated.thumbnailUrl };
+          })
+          .catch((err) => {
+            toast.error(`The dish was saved, but its photo was not: ${errorMessage(err)}`);
+          })
+      );
     }
 
     if (removeModel && item?.modelUrl && !modelFile) {
-      try {
-        saved = await api.removeModel(saved.id);
-      } catch {
-        // ignore
-      }
+      uploadTasks.push(
+        api.removeModel(saved.id)
+          .then(() => {
+            saved = { ...saved, modelUrl: null, modelFileName: null };
+          })
+          .catch(() => {})
+      );
     }
 
     if (modelFile) {
-      try {
-        saved = await api.uploadModel(saved.id, modelFile, setModelProgress);
-      } catch (err) {
-        toast.error(`The dish was saved, but its 3D model failed to attach: ${errorMessage(err)}`);
-      }
+      uploadTasks.push(
+        api.uploadModel(saved.id, modelFile, setModelProgress)
+          .then((updated) => {
+            saved = {
+              ...saved,
+              modelUrl: updated.modelUrl,
+              modelFileName: updated.modelFileName,
+              modelStatus: updated.modelStatus,
+              modelFileSize: updated.modelFileSize
+            };
+          })
+          .catch((err) => {
+            toast.error(`The dish was saved, but its 3D model failed to attach: ${errorMessage(err)}`);
+          })
+      );
+    }
+
+    if (uploadTasks.length > 0) {
+      await Promise.all(uploadTasks);
     }
 
     onSaved(saved);
@@ -329,11 +352,28 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
       </div>
       <div className="drawer-foot">
         {saving && ((file && progress > 0 && progress < 1) || (modelFile && modelProgress > 0 && modelProgress < 1)) ? (
-          <Progress value={Math.max(progress, modelProgress)} />
+          <div style={{ flex: 1, marginRight: '16px', display: 'grid', gap: '4px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--slate)' }}>
+              {modelFile && modelProgress > 0 && modelProgress < 1
+                ? `Uploading 3D model (${Math.round(modelProgress * 100)}%)...`
+                : file && progress > 0 && progress < 1
+                ? `Uploading photo (${Math.round(progress * 100)}%)...`
+                : 'Saving dish...'}
+            </span>
+            <Progress value={Math.max(progress, modelProgress)} />
+          </div>
         ) : <span />}
         <div className="actions">
-          <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" type="submit" loading={saving}>{item ? 'Save changes' : 'Add dish'}</Button>
+          <Button onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button variant="primary" type="submit" loading={saving}>
+            {saving
+              ? (modelFile && modelProgress > 0 && modelProgress < 1
+                  ? `Uploading model (${Math.round(modelProgress * 100)}%)`
+                  : file && progress > 0 && progress < 1
+                  ? `Uploading photo (${Math.round(progress * 100)}%)`
+                  : 'Saving dish...')
+              : (item ? 'Save changes' : 'Add dish')}
+          </Button>
         </div>
       </div>
     </form>
