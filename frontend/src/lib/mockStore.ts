@@ -307,6 +307,7 @@ class MockStore {
     const idx = items.findIndex((i) => i.id === id);
     if (idx === -1) throw new Error('Dish not found');
     items[idx].imageUrl = url;
+    items[idx].thumbnailUrl = url;
     this.saveItems(items);
     return items[idx];
   }
@@ -319,6 +320,10 @@ class MockStore {
     if (idx === -1) throw new Error('Dish not found');
     items[idx].modelUrl = url;
     items[idx].modelFileName = file.name;
+    items[idx].modelStatus = 'READY';
+    items[idx].modelFileSize = file.size;
+    items[idx].originalModelFileSize = file.size;
+    items[idx].modelOptimizationNotes = `Demo simulation: ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
     this.saveItems(items);
     return items[idx];
   }
@@ -329,6 +334,10 @@ class MockStore {
     if (idx === -1) throw new Error('Dish not found');
     items[idx].modelUrl = null;
     items[idx].modelFileName = null;
+    items[idx].modelStatus = 'READY';
+    items[idx].modelFileSize = null;
+    items[idx].originalModelFileSize = null;
+    items[idx].modelOptimizationNotes = null;
     this.saveItems(items);
     return items[idx];
   }

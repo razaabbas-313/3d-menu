@@ -46,6 +46,24 @@ public class MenuItem {
     @Column(length = 500)
     private String modelUrl;
 
+    @Column(length = 500)
+    private String thumbnailUrl;
+
+    @Column(length = 500)
+    private String originalModelUrl;
+
+    @Column(length = 20)
+    private String modelStatus = "READY";
+
+    @Column
+    private Long modelFileSize;
+
+    @Column
+    private Long originalModelFileSize;
+
+    @Column(length = 500)
+    private String modelOptimizationNotes;
+
     @Column(length = 255)
     private String modelFileName;
 
@@ -90,7 +108,13 @@ public class MenuItem {
     public String getDescriptionAr() { return descriptionAr; }
     public BigDecimal getPrice() { return price; }
     public String getImageUrl() { return imageUrl; }
+    public String getThumbnailUrl() { return thumbnailUrl; }
     public String getModelUrl() { return modelUrl; }
+    public String getOriginalModelUrl() { return originalModelUrl; }
+    public String getModelStatus() { return modelStatus != null ? modelStatus : "READY"; }
+    public Long getModelFileSize() { return modelFileSize; }
+    public Long getOriginalModelFileSize() { return originalModelFileSize; }
+    public String getModelOptimizationNotes() { return modelOptimizationNotes; }
     public String getModelFileName() { return modelFileName; }
     public String getTags() { return tags; }
     public Double getModelScale() { return modelScale == null ? 1.0 : modelScale; }
@@ -101,7 +125,14 @@ public class MenuItem {
     public Instant getCreatedAt() { return createdAt; }
 
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setThumbnailUrl(String thumbnailUrl) { this.thumbnailUrl = thumbnailUrl; }
     public void setModel(String url, String fileName) { this.modelUrl = url; this.modelFileName = fileName; }
+    public void setModelFileName(String modelFileName) { this.modelFileName = modelFileName; }
+    public void setOriginalModelUrl(String originalModelUrl) { this.originalModelUrl = originalModelUrl; }
+    public void setModelStatus(String modelStatus) { this.modelStatus = modelStatus; }
+    public void setModelFileSize(Long modelFileSize) { this.modelFileSize = modelFileSize; }
+    public void setOriginalModelFileSize(Long originalModelFileSize) { this.originalModelFileSize = originalModelFileSize; }
+    public void setModelOptimizationNotes(String notes) { this.modelOptimizationNotes = notes; }
     public void setModelScale(Double modelScale) { this.modelScale = modelScale; }
     public void setModelPlacement(String modelPlacement) { this.modelPlacement = modelPlacement; }
     public void setNameUr(String nameUr) { this.nameUr = nameUr; }

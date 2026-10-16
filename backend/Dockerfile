@@ -12,6 +12,11 @@ RUN mvn -B -q -DskipTests clean package
 FROM eclipse-temurin:21-jre-alpine
 LABEL maintainer="Atelier AR Engineering"
 
+# Install Node.js for glTF Transform CLI 3D asset optimization
+RUN apk add --no-cache nodejs npm && \
+    npm install -g @gltf-transform/cli && \
+    npm cache clean --force
+
 # Security: Run as unprivileged non-root user
 RUN addgroup -S -g 10001 atelier && \
     adduser -S -u 10001 -G atelier -h /app -s /bin/sh atelier && \

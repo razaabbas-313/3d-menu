@@ -2,16 +2,30 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "AllowPublicReadForAssetsAndSnapshots",
+      "Sid": "AllowCloudFrontServicePrincipalReadOnly",
       "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::atelier-ar-bucket/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::480836974477:distribution/E19LA2DNANLPZB"
+        }
+      }
+    },
+    {
+      "Sid": "DenyDirectAccessToPrivateOriginals",
+      "Effect": "Deny",
       "Principal": "*",
       "Action": "s3:GetObject",
-      "Resource": [
-        "arn:aws:s3:::YOUR_BUCKET_NAME/restaurants/*",
-        "arn:aws:s3:::YOUR_BUCKET_NAME/models/*",
-        "arn:aws:s3:::YOUR_BUCKET_NAME/images/*",
-        "arn:aws:s3:::YOUR_BUCKET_NAME/public/*"
-      ]
+      "Resource": "arn:aws:s3:::atelier-ar-bucket/restaurants/*/items/*/original-*.glb",
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalArn": "arn:aws:iam::480836974477:user/atelier-ar-backend"
+        }
+      }
     }
   ]
 }

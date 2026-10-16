@@ -10,10 +10,10 @@
         "s3:DeleteObject"
       ],
       "Resource": [
-        "arn:aws:s3:::YOUR_BUCKET_NAME/restaurants/*",
-        "arn:aws:s3:::YOUR_BUCKET_NAME/models/*",
-        "arn:aws:s3:::YOUR_BUCKET_NAME/images/*",
-        "arn:aws:s3:::YOUR_BUCKET_NAME/public/*"
+        "arn:aws:s3:::atelier-ar-bucket/restaurants/*",
+        "arn:aws:s3:::atelier-ar-bucket/models/*",
+        "arn:aws:s3:::atelier-ar-bucket/images/*",
+        "arn:aws:s3:::atelier-ar-bucket/public/*"
       ]
     },
     {
@@ -22,7 +22,7 @@
       "Action": [
         "s3:ListBucket"
       ],
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME",
+      "Resource": "arn:aws:s3:::atelier-ar-bucket",
       "Condition": {
         "StringLike": {
           "s3:prefix": [

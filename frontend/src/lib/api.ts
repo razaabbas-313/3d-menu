@@ -33,8 +33,14 @@ export type Item = {
   description: string | null;
   price: number;
   imageUrl: string | null;
+  thumbnailUrl?: string | null;
   modelUrl: string | null;
+  originalModelUrl?: string | null;
   modelFileName: string | null;
+  modelStatus?: 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED' | string | null;
+  modelFileSize?: number | null;
+  originalModelFileSize?: number | null;
+  modelOptimizationNotes?: string | null;
   tags: string | null;
   featured: boolean;
   available: boolean;
@@ -98,7 +104,10 @@ export type PublicItem = Pick<
   | 'description'
   | 'price'
   | 'imageUrl'
+  | 'thumbnailUrl'
   | 'modelUrl'
+  | 'modelStatus'
+  | 'modelFileSize'
   | 'tags'
   | 'featured'
   | 'available'
@@ -412,6 +421,13 @@ export const api = {
       return mockStore.tuneModel(id, scale ?? 1.0, placement ?? 'plate');
     }
   },
+  getOriginalModelUrl: async (id: string) => {
+    try {
+      return await request<{ url: string }>(`/items/${id}/original-model-url`);
+    } catch {
+      return { url: '' };
+    }
+  },
 
   // analytics
   analytics: async (days: number) => {
@@ -424,9 +440,10 @@ export const api = {
 
   // public (no auth header)
   publicMenu: async (slug: string): Promise<PublicMenu> => {
-    const defaultAssetBase = import.meta.env.DEV ? '' : 'https://atelier-ar-bucket.s3.ap-south-1.amazonaws.com';
-    const assetBase = (import.meta.env.VITE_ASSET_BASE_URL || defaultAssetBase).replace(/\/$/, '');
-    const snapshotUrl = `${assetBase}/public/${encodeURIComponent(slug)}/menu.json`;
+    const assetBase = (import.meta.env.VITE_ASSET_BASE_URL || import.meta.env.VITE_S3_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    const snapshotUrl = assetBase
+      ? `${assetBase}/public/${encodeURIComponent(slug)}/menu.json`
+      : `${BASE}/uploads/public/${encodeURIComponent(slug)}/menu.json`;
 
     // 1. Try static S3 / CDN snapshot first (zero wait for sleeping free-tier servers)
     try {

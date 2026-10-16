@@ -3,10 +3,12 @@ package com.atelierar.menu;
 import com.atelierar.restaurant.Restaurant;
 import com.atelierar.restaurant.RestaurantService;
 import com.atelierar.storage.StorageService;
+import com.atelierar.storage.StorageValidator;
 import com.atelierar.web.Dtos.ItemDto;
 import com.atelierar.web.Dtos.ItemRequest;
 import com.atelierar.web.Mappers;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -28,13 +31,24 @@ public class MenuItemController {
     private final MenuItemRepository items;
     private final StorageService storage;
     private final com.atelierar.publicapi.PublicMenuSnapshotService snapshots;
+    private final ModelOptimizationService modelOptimizer;
+    private final ImageOptimizationService imageOptimizer;
+    private final long maxModelBytes;
 
-    public MenuItemController(RestaurantService restaurants, MenuItemRepository items, StorageService storage,
-                              com.atelierar.publicapi.PublicMenuSnapshotService snapshots) {
+    public MenuItemController(RestaurantService restaurants,
+                              MenuItemRepository items,
+                              StorageService storage,
+                              com.atelierar.publicapi.PublicMenuSnapshotService snapshots,
+                              ModelOptimizationService modelOptimizer,
+                              ImageOptimizationService imageOptimizer,
+                              @Value("${app.storage.max-model-mb:15}") long maxModelMb) {
         this.restaurants = restaurants;
         this.items = items;
         this.storage = storage;
         this.snapshots = snapshots;
+        this.modelOptimizer = modelOptimizer;
+        this.imageOptimizer = imageOptimizer;
+        this.maxModelBytes = maxModelMb * 1024L * 1024L;
     }
 
     @GetMapping
@@ -60,7 +74,14 @@ public class MenuItemController {
         String oldImage = item.getImageUrl();
         applyRequest(item, req);
         MenuItem saved = items.save(item);
-        if (oldImage != null && !oldImage.equals(saved.getImageUrl())) storage.deleteQuietly(oldImage);
+        if (oldImage != null && !oldImage.equals(saved.getImageUrl())) {
+            storage.deleteQuietly(oldImage);
+            if (item.getThumbnailUrl() != null) {
+                storage.deleteQuietly(item.getThumbnailUrl());
+                item.setThumbnailUrl(null);
+                saved = items.save(item);
+            }
+        }
         snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);
     }
@@ -70,10 +91,14 @@ public class MenuItemController {
     public void delete(@PathVariable UUID id) {
         MenuItem item = owned(id);
         String image = item.getImageUrl();
+        String thumb = item.getThumbnailUrl();
         String model = item.getModelUrl();
+        String originalModel = item.getOriginalModelUrl();
         items.delete(item);
         storage.deleteQuietly(image);
+        storage.deleteQuietly(thumb);
         storage.deleteQuietly(model);
+        storage.deleteQuietly(originalModel);
         snapshots.updateSnapshot(item.getRestaurantId());
     }
 
@@ -91,11 +116,24 @@ public class MenuItemController {
     @PostMapping(value = "/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ItemDto uploadImage(@PathVariable UUID id, @RequestParam("file") MultipartFile file) throws IOException {
         MenuItem item = owned(id);
-        String url = storage.saveItemImage(item.getRestaurantId(), item.getId(), file);
-        String old = item.getImageUrl();
-        item.setImageUrl(url);
+        StorageValidator.ImageInfo info = StorageValidator.validateImage(file);
+
+        byte[] rawBytes = file.getBytes();
+        ImageOptimizationService.ImageResult imgResult = imageOptimizer.optimize(rawBytes, info);
+
+        String mainUrl = storage.saveItemImageBytes(item.getRestaurantId(), item.getId(), imgResult.mainBytes(), imgResult.mainExtension(), imgResult.mainMimeType());
+        String thumbUrl = storage.saveItemThumbnail(item.getRestaurantId(), item.getId(), imgResult.thumbnailBytes(), imgResult.thumbExtension(), imgResult.thumbMimeType());
+
+        String oldImage = item.getImageUrl();
+        String oldThumb = item.getThumbnailUrl();
+
+        item.setImageUrl(mainUrl);
+        item.setThumbnailUrl(thumbUrl);
         MenuItem saved = items.save(item);
-        storage.deleteQuietly(old);
+
+        if (oldImage != null && !oldImage.equals(mainUrl)) storage.deleteQuietly(oldImage);
+        if (oldThumb != null && !oldThumb.equals(thumbUrl)) storage.deleteQuietly(oldThumb);
+
         snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);
     }
@@ -103,24 +141,74 @@ public class MenuItemController {
     @PostMapping(value = "/{id}/model", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ItemDto uploadModel(@PathVariable UUID id, @RequestParam("file") MultipartFile file) throws IOException {
         MenuItem item = owned(id);
-        String url = storage.saveItemModel(item.getRestaurantId(), item.getId(), file);
-        String old = item.getModelUrl();
-        item.setModel(url, displayName(file.getOriginalFilename()));
+        StorageValidator.validateModel(file, maxModelBytes);
+
+        // Track lifecycle state
+        item.setModelStatus("PROCESSING");
+        item.setModelFileName(displayName(file.getOriginalFilename()));
+        items.save(item);
+
+        byte[] originalBytes = file.getBytes();
+        long origSize = originalBytes.length;
+
+        // 1. Store original model privately in S3
+        String oldOriginal = item.getOriginalModelUrl();
+        String originalUrl = storage.saveItemOriginalModel(item.getRestaurantId(), item.getId(), originalBytes, file.getOriginalFilename());
+
+        // 2. Optimize production copy using Draco and WebP pipeline
+        ModelOptimizationService.OptimizationResult optResult = modelOptimizer.optimize(originalBytes, file.getOriginalFilename());
+
+        // 3. Upload optimized model to public S3 / CloudFront location
+        String oldModel = item.getModelUrl();
+        String optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), optResult.optimizedBytes());
+
+        // 4. Update database item metadata
+        item.setModel(optimizedUrl, displayName(file.getOriginalFilename()));
+        item.setOriginalModelUrl(originalUrl);
+        item.setOriginalModelFileSize(origSize);
+        item.setModelFileSize(optResult.optimizedSize());
+        item.setModelStatus(optResult.status());
+        item.setModelOptimizationNotes(optResult.notes());
         MenuItem saved = items.save(item);
-        storage.deleteQuietly(old);
-        snapshots.updateSnapshot(saved.getRestaurantId());
+
+        // 5. Clean up old assets quietly
+        if (oldModel != null && !oldModel.equals(optimizedUrl)) storage.deleteQuietly(oldModel);
+        if (oldOriginal != null && !oldOriginal.equals(originalUrl)) storage.deleteQuietly(oldOriginal);
+
+        // 6. Update menu snapshot ONLY after asset is successfully processed
+        if ("READY".equalsIgnoreCase(saved.getModelStatus())) {
+            snapshots.updateSnapshot(saved.getRestaurantId());
+        }
+
         return Mappers.item(saved);
     }
 
     @DeleteMapping("/{id}/model")
     public ItemDto removeModel(@PathVariable UUID id) {
         MenuItem item = owned(id);
-        String old = item.getModelUrl();
+        String oldModel = item.getModelUrl();
+        String oldOriginal = item.getOriginalModelUrl();
         item.setModel(null, null);
+        item.setOriginalModelUrl(null);
+        item.setModelFileSize(null);
+        item.setOriginalModelFileSize(null);
+        item.setModelStatus("READY");
+        item.setModelOptimizationNotes(null);
         MenuItem saved = items.save(item);
-        storage.deleteQuietly(old);
+        if (oldModel != null) storage.deleteQuietly(oldModel);
+        if (oldOriginal != null) storage.deleteQuietly(oldOriginal);
         snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);
+    }
+
+    @GetMapping("/{id}/original-model-url")
+    public Map<String, String> getOriginalModelUrl(@PathVariable UUID id) {
+        MenuItem item = owned(id);
+        if (item.getOriginalModelUrl() == null || item.getOriginalModelUrl().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No original model available for this dish.");
+        }
+        String presignedUrl = storage.generatePresignedGetUrl(item.getOriginalModelUrl(), Duration.ofMinutes(15));
+        return Map.of("url", presignedUrl);
     }
 
     @PatchMapping("/{id}/model-tuning")

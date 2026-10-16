@@ -82,7 +82,9 @@ public final class Dtos {
     }
 
     public record ItemDto(String id, String name, String category, String description, BigDecimal price,
-                          String imageUrl, String modelUrl, String modelFileName, String tags,
+                          String imageUrl, String thumbnailUrl, String modelUrl, String originalModelUrl,
+                          String modelFileName, String modelStatus, Long modelFileSize, Long originalModelFileSize,
+                          String modelOptimizationNotes, String tags,
                           boolean featured, boolean available, boolean published, Instant createdAt,
                           Double modelScale, String modelPlacement,
                           String nameUr, String descriptionUr, String nameAr, String descriptionAr) {
@@ -97,7 +99,8 @@ public final class Dtos {
     }
 
     public record PublicItemDto(String id, String name, String category, String description, BigDecimal price,
-                                String imageUrl, String modelUrl, String tags, boolean featured, boolean available,
+                                String imageUrl, String thumbnailUrl, String modelUrl, String modelStatus, Long modelFileSize,
+                                String tags, boolean featured, boolean available,
                                 Double modelScale, String modelPlacement,
                                 String nameUr, String descriptionUr, String nameAr, String descriptionAr) {
     }

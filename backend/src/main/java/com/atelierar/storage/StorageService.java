@@ -4,6 +4,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,7 +16,15 @@ public interface StorageService {
 
     String saveItemModel(UUID restaurantId, UUID itemId, MultipartFile file) throws IOException;
 
+    String saveItemOriginalModel(UUID restaurantId, UUID itemId, byte[] content, String originalFilename) throws IOException;
+
+    String saveItemOptimizedModel(UUID restaurantId, UUID itemId, byte[] content) throws IOException;
+
     String saveItemImage(UUID restaurantId, UUID itemId, MultipartFile file) throws IOException;
+
+    String saveItemImageBytes(UUID restaurantId, UUID itemId, byte[] content, String extension, String mimeType) throws IOException;
+
+    String saveItemThumbnail(UUID restaurantId, UUID itemId, byte[] content, String extension, String mimeType) throws IOException;
 
     String saveCoverImage(UUID restaurantId, MultipartFile file) throws IOException;
 
@@ -38,4 +47,6 @@ public interface StorageService {
     boolean isLocal();
 
     long getRestaurantStorageUsage(UUID restaurantId);
+
+    String generatePresignedGetUrl(String urlOrKey, Duration duration);
 }

@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -50,6 +51,30 @@ public class LocalStorageService implements StorageService {
     }
 
     @Override
+    public String saveItemOriginalModel(UUID restaurantId, UUID itemId, byte[] content, String originalFilename) throws IOException {
+        checkQuota(restaurantId, content.length);
+        String relativePath;
+        if (restaurantId != null && itemId != null) {
+            relativePath = "restaurants/" + restaurantId + "/items/" + itemId + "/original-" + UUID.randomUUID() + ".glb";
+        } else {
+            relativePath = "models/original-" + UUID.randomUUID() + ".glb";
+        }
+        return writeBytes(relativePath, content);
+    }
+
+    @Override
+    public String saveItemOptimizedModel(UUID restaurantId, UUID itemId, byte[] content) throws IOException {
+        checkQuota(restaurantId, content.length);
+        String relativePath;
+        if (restaurantId != null && itemId != null) {
+            relativePath = "restaurants/" + restaurantId + "/items/" + itemId + "/" + UUID.randomUUID() + ".glb";
+        } else {
+            relativePath = "models/" + UUID.randomUUID() + ".glb";
+        }
+        return writeBytes(relativePath, content);
+    }
+
+    @Override
     public String saveItemImage(UUID restaurantId, UUID itemId, MultipartFile file) throws IOException {
         StorageValidator.ImageInfo info = StorageValidator.validateImage(file);
         checkQuota(restaurantId, file.getSize());
@@ -61,6 +86,32 @@ public class LocalStorageService implements StorageService {
             relativePath = "images/" + UUID.randomUUID() + "." + info.extension();
         }
         return write(relativePath, file);
+    }
+
+    @Override
+    public String saveItemImageBytes(UUID restaurantId, UUID itemId, byte[] content, String extension, String mimeType) throws IOException {
+        checkQuota(restaurantId, content.length);
+        String ext = (extension != null && !extension.isBlank()) ? extension : "jpg";
+        String relativePath;
+        if (restaurantId != null && itemId != null) {
+            relativePath = "restaurants/" + restaurantId + "/items/" + itemId + "/image-" + UUID.randomUUID() + "." + ext;
+        } else {
+            relativePath = "images/" + UUID.randomUUID() + "." + ext;
+        }
+        return writeBytes(relativePath, content);
+    }
+
+    @Override
+    public String saveItemThumbnail(UUID restaurantId, UUID itemId, byte[] content, String extension, String mimeType) throws IOException {
+        checkQuota(restaurantId, content.length);
+        String ext = (extension != null && !extension.isBlank()) ? extension : "jpg";
+        String relativePath;
+        if (restaurantId != null && itemId != null) {
+            relativePath = "restaurants/" + restaurantId + "/items/" + itemId + "/thumb-" + UUID.randomUUID() + "." + ext;
+        } else {
+            relativePath = "images/thumb-" + UUID.randomUUID() + "." + ext;
+        }
+        return writeBytes(relativePath, content);
     }
 
     @Override
@@ -145,6 +196,15 @@ public class LocalStorageService implements StorageService {
         }
     }
 
+    @Override
+    public String generatePresignedGetUrl(String urlOrKey, Duration duration) {
+        if (urlOrKey == null || urlOrKey.isBlank()) return urlOrKey;
+        if (urlOrKey.startsWith("http://") || urlOrKey.startsWith("https://") || urlOrKey.startsWith(PREFIX)) {
+            return urlOrKey;
+        }
+        return PREFIX + urlOrKey;
+    }
+
     private void checkQuota(UUID restaurantId, long newBytes) {
         if (restaurantId == null) return;
         long current = getRestaurantStorageUsage(restaurantId);
@@ -161,6 +221,16 @@ public class LocalStorageService implements StorageService {
         }
         Files.createDirectories(dest.getParent());
         file.transferTo(dest);
+        return PREFIX + relativePath.replace('\\', '/');
+    }
+
+    private String writeBytes(String relativePath, byte[] content) throws IOException {
+        Path dest = root.resolve(relativePath).normalize();
+        if (!dest.startsWith(root)) {
+            throw StorageValidator.bad("Invalid file path.");
+        }
+        Files.createDirectories(dest.getParent());
+        Files.write(dest, content);
         return PREFIX + relativePath.replace('\\', '/');
     }
 }

@@ -287,9 +287,15 @@ export function MenuLibrary() {
                 return (
                   <article key={d.id} className={`dish ${d.published ? '' : 'is-hidden'}`}>
                     <div className="dish-img">
-                      <Photo src={assetUrl(d.imageUrl)} alt={d.name} />
+                      <Photo src={assetUrl(d.thumbnailUrl || d.imageUrl)} alt={d.name} />
                       <div className="dish-badges">
-                        {d.modelUrl && <Chip tone="saffron" icon={<Box size={12} />}>3D Active</Chip>}
+                        {d.modelStatus === 'PROCESSING' ? (
+                          <Chip tone="saffron" icon={<Box size={12} />}>3D Processing</Chip>
+                        ) : d.modelUrl ? (
+                          <Chip tone="saffron" icon={<Box size={12} />}>
+                            3D Active{d.modelFileSize ? ` (${(d.modelFileSize / (1024 * 1024)).toFixed(1)}MB)` : ''}
+                          </Chip>
+                        ) : null}
                         {d.featured && <Chip tone="cobalt" icon={<Star size={12} />}>Featured</Chip>}
                         {!d.published && <Chip tone="neutral">Hidden</Chip>}
                         {!d.available && <Chip tone="chili">Sold Out</Chip>}

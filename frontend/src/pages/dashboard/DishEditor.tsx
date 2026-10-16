@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Globe, ImagePlus, Trash2, X } from 'lucide-react';
+import { Box, Download, Globe, ImagePlus, Sparkles, Trash2, X } from 'lucide-react';
 import { api, assetUrl, Item, ItemInput } from '../../lib/api';
 import { DEFAULT_CATEGORIES, parseTags } from '../../lib/format';
 import { navigate } from '../../lib/router';
@@ -98,6 +98,20 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
     setRemoveModel(false);
   }
 
+  async function downloadOriginal() {
+    if (!item?.id) return;
+    try {
+      const res = await api.getOriginalModelUrl(item.id);
+      if (res.url) {
+        window.open(res.url, '_blank');
+      } else {
+        toast.info('No original model download available.');
+      }
+    } catch (e) {
+      toast.error(errorMessage(e, 'Could not retrieve original model URL.'));
+    }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     const numeric = Number(price);
@@ -180,14 +194,21 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
           </div>
         </div>
 
-        <div className="model-pick" style={{ padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--line)', display: 'grid', gap: '8px' }}>
+        <div className="model-pick" style={{ padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--line)', display: 'grid', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
             <label style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--ink)' }}>3D AR Model (.glb)</label>
-            {(modelFile || (!removeModel && item?.modelUrl)) && (
-              <Chip tone="saffron" icon={<Box size={12} />}>3D Attached</Chip>
-            )}
+            {modelFile ? (
+              <Chip tone="saffron" icon={<Sparkles size={12} />}>New Model Ready to Optimize</Chip>
+            ) : item?.modelStatus === 'PROCESSING' ? (
+              <Chip tone="saffron" icon={<Box size={12} />}>Optimizing (Draco + WebP)...</Chip>
+            ) : item?.modelStatus === 'FAILED' ? (
+              <Chip tone="chili" icon={<Box size={12} />}>Optimization Failed</Chip>
+            ) : (!removeModel && item?.modelUrl) ? (
+              <Chip tone="basil" icon={<Box size={12} />}>3D Ready (Optimized)</Chip>
+            ) : null}
           </div>
-          <div className="model-pick-actions">
+
+          <div className="model-pick-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
             <input ref={modelInput} type="file" hidden accept=".glb,model/gltf-binary" onChange={(e) => { pickModel(e.target.files?.[0]); e.target.value = ''; }} />
             <Button size="sm" type="button" icon={<Box size={14} />} onClick={() => modelInput.current?.click()}>
               <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}>
@@ -204,7 +225,31 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
                 Open 3D Studio
               </Button>
             )}
+            {item?.originalModelUrl && !modelFile && !removeModel && (
+              <Button size="sm" variant="ghost" type="button" icon={<Download size={14} />} onClick={downloadOriginal}>
+                Original (.glb)
+              </Button>
+            )}
           </div>
+
+          {/* Asset optimization stats & notes */}
+          {item?.modelFileSize && !removeModel && !modelFile && (
+            <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--line)', fontSize: '12px', display: 'grid', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                <span style={{ color: 'var(--ink)' }}>
+                  Production Size: <strong>{(item.modelFileSize / (1024 * 1024)).toFixed(2)} MB</strong>
+                </span>
+                {item.originalModelFileSize && item.originalModelFileSize > item.modelFileSize && (
+                  <span style={{ color: '#34d399', fontWeight: 600 }}>
+                    ⚡ Saved {Math.round((1 - item.modelFileSize / item.originalModelFileSize) * 100)}% (from {(item.originalModelFileSize / (1024 * 1024)).toFixed(2)} MB)
+                  </span>
+                )}
+              </div>
+              {item.modelOptimizationNotes && (
+                <span style={{ color: 'var(--ink-muted)', fontSize: '11px' }}>{item.modelOptimizationNotes}</span>
+              )}
+            </div>
+          )}
 
           {modelWarning && (
             <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.35)', color: '#facc15', fontSize: '12px', lineHeight: 1.4 }}>
@@ -212,7 +257,7 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
             </div>
           )}
           <span className="field-hint" style={{ margin: 0 }}>
-            Upload a .glb 3D asset (up to 25 MB). Guests can view it in 3D and project it life-size on their table in AR.
+            Upload a .glb 3D asset (up to 25 MB). Models are automatically compressed with Draco geometry and WebP textures for instantaneous mobile diner loading.
           </span>
         </div>
 

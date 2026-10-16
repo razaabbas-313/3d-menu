@@ -71,9 +71,9 @@ Follow the step-by-step setup in [`docs/aws/CLOUDFRONT_AND_BUDGETS.md`](file:///
    | `JWT_SECRET` | `(32+ character random hex)` | `openssl rand -hex 32` |
    | `CORS_ORIGINS` | `https://*.pages.dev,http://localhost:5173` | Add your custom domain here once configured |
    | `STORAGE_PROVIDER` | `s3` | Enables cloud asset persistence |
-   | `AWS_REGION` | `us-east-1` | Your S3 bucket region |
-   | `S3_BUCKET` | `atelier-menu-assets-prod` | Your S3 bucket name |
-   | `S3_PUBLIC_BASE_URL` | `https://d111111abcdef8.cloudfront.net` | Your CloudFront distribution URL |
+   | `AWS_REGION` | `ap-south-1` | S3 bucket region (Mumbai) |
+   | `S3_BUCKET` | `atelier-ar-bucket` | Your S3 bucket name |
+   | `S3_PUBLIC_BASE_URL` | `https://d3v0d0550ieqxu.cloudfront.net` | Your CloudFront distribution URL |
    | `AWS_ACCESS_KEY_ID` | `AKIA...` | IAM user access key |
    | `AWS_SECRET_ACCESS_KEY` | `wJalr...` | IAM user secret key |
    | `DB_URL` | `jdbc:postgresql://...` | JDBC URL from Neon or Supabase |
@@ -99,7 +99,7 @@ Follow the step-by-step setup in [`docs/aws/CLOUDFRONT_AND_BUDGETS.md`](file:///
    * **Build output directory**: `dist`
 5. Under **Environment variables (Production)**, add:
    * `VITE_API_BASE_URL`: `https://atelier-ar-api.onrender.com` (your backend URL)
-   * `VITE_ASSET_BASE_URL`: `https://d111111abcdef8.cloudfront.net` (your CloudFront URL)
+   * `VITE_ASSET_BASE_URL`: `https://d3v0d0550ieqxu.cloudfront.net` (your CloudFront URL)
 6. Click **Save and Deploy**.
 7. Cloudflare Pages automatically detects [`frontend/public/_redirects`](file:///d:/downloads/atelier-ar-v2/atelier/frontend/public/_redirects) for SPA routing and [`frontend/public/_headers`](file:///d:/downloads/atelier-ar-v2/atelier/frontend/public/_headers) for 3D model CORS headers.
 

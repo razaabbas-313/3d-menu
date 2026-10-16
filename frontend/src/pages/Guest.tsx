@@ -787,7 +787,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                             aria-label={`${getDishName(i, lang)}, ${money(i.price, cur)}`}
                         >
                           <div className="g-feature-img">
-                            <Photo src={assetUrl(i.imageUrl)} alt={getDishName(i, lang)} />
+                            <Photo src={assetUrl(i.thumbnailUrl || i.imageUrl)} alt={getDishName(i, lang)} />
                             {i.modelUrl ? (
                                 <span className="badge-3d badge-3d-glow">
                           <Box size={12} />
@@ -902,7 +902,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                               </div>
 
                               <div className="g-row-img-wrap">
-                                <Photo src={assetUrl(i.imageUrl)} alt={getDishName(i, lang)} />
+                                <Photo src={assetUrl(i.thumbnailUrl || i.imageUrl)} alt={getDishName(i, lang)} />
                                 {i.modelUrl && (
                                     <span className="badge-3d badge-3d-corner">
                               <Box size={11} /> 3D
@@ -1174,7 +1174,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                             {upsells.map((u) => (
                                 <div key={u.id} className="upsell-card">
                                   <div className="upsell-img">
-                                    <Photo src={assetUrl(u.imageUrl)} alt={u.name} />
+                                    <Photo src={assetUrl(u.thumbnailUrl || u.imageUrl)} alt={u.name} />
                                   </div>
                                   <strong>{u.name}</strong>
                                   <span>{money(u.price, cur)}</span>
@@ -1609,7 +1609,7 @@ function DishSheet({
                         </div>
                         <div className="pairing-card-body">
                           <div className="pairing-card-img">
-                            <Photo src={assetUrl(pairing.imageUrl)} alt={getDishName(pairing, lang)} />
+                            <Photo src={assetUrl(pairing.thumbnailUrl || pairing.imageUrl)} alt={getDishName(pairing, lang)} />
                           </div>
                           <div className="pairing-card-info">
                             <strong>{getDishName(pairing, lang)}</strong>
