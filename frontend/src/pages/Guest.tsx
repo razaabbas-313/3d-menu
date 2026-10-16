@@ -38,6 +38,7 @@ import { errorMessage, useToast } from '../lib/toast';
 import { Button, Chip, Dialog, EmptyState, Logo, Photo, Spinner } from '../components/ui';
 import { ModelViewer, ModelViewerHandle, PlatePlacement } from '../components/ModelViewer';
 import { useMenu } from './dashboard/menuStore';
+import { getDishDescription, getDishName, SupportedLang, TRANSLATIONS } from '../lib/i18n';
 
 export type OrderEntry = { item: PublicItem; count: number; notes?: string };
 
@@ -165,16 +166,6 @@ type ViewProps = {
 
 type FilterKey = 'all' | 'featured' | '3d' | 'veg' | 'halal' | 'spicy' | 'gluten-free';
 
-const FILTERS: { key: FilterKey; label: string; icon?: React.ReactNode }[] = [
-  { key: 'all', label: 'All' },
-  { key: '3d', label: '3D & AR', icon: <Box size={13} /> },
-  { key: 'featured', label: 'Specials', icon: <Sparkles size={13} /> },
-  { key: 'veg', label: '🌱 Vegetarian' },
-  { key: 'halal', label: 'Halal' },
-  { key: 'spicy', label: '🌶️ Spicy' },
-  { key: 'gluten-free', label: 'Gluten-Free' }
-];
-
 /** Keyboard activation for clickable non-button elements (Enter / Space). */
 const onActivate = (fn: () => void) => (e: React.KeyboardEvent) => {
   if (e.target !== e.currentTarget) return;
@@ -191,6 +182,29 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
   const [activeCat, setActiveCat] = useState<string>('');
   const [filter, setFilter] = useState<FilterKey>('all');
   const [selected, setSelected] = useState<PublicItem | null>(null);
+
+  // Multi-Language State (English, Urdu, Arabic)
+  const [lang, setLang] = useState<SupportedLang>(() => {
+    try {
+      const saved = localStorage.getItem('atelier.guest.lang');
+      if (saved === 'ur' || saved === 'ar' || saved === 'en') return saved;
+    } catch {
+      /* storage unavailable */
+    }
+    return 'en';
+  });
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  const isRtl = lang === 'ur' || lang === 'ar';
+  const t = TRANSLATIONS[lang];
+
+  const switchLang = (newLang: SupportedLang) => {
+    setLang(newLang);
+    try {
+      localStorage.setItem('atelier.guest.lang', newLang);
+    } catch {
+      /* storage unavailable */
+    }
+  };
 
   // Modals & Drawers
   const [showWifi, setShowWifi] = useState(false);
@@ -253,8 +267,22 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
     return true;
   };
 
-  const searchMatches = (i: PublicItem) =>
-      !q || `${i.name} ${i.description ?? ''} ${i.tags ?? ''} ${i.category}`.toLowerCase().includes(q);
+  const searchMatches = (i: PublicItem) => {
+    if (!q) return true;
+    const names = `${i.name} ${i.nameUr ?? ''} ${i.nameAr ?? ''}`;
+    const descs = `${i.description ?? ''} ${i.descriptionUr ?? ''} ${i.descriptionAr ?? ''}`;
+    return `${names} ${descs} ${i.tags ?? ''} ${i.category}`.toLowerCase().includes(q);
+  };
+
+  const filtersList = useMemo((): { key: FilterKey; label: string; icon?: React.ReactNode }[] => [
+    { key: 'all', label: t.allCategories },
+    { key: '3d', label: t.threeDModels, icon: <Box size={13} /> },
+    { key: 'featured', label: t.specials, icon: <Sparkles size={13} /> },
+    { key: 'veg', label: `🌱 ${t.vegetarian}` },
+    { key: 'halal', label: t.halal },
+    { key: 'spicy', label: `🌶️ ${t.spicy}` },
+    { key: 'gluten-free', label: t.glutenFree }
+  ], [t]);
 
   const visibleItems = items.filter((i) => searchMatches(i) && filterMatches(i));
   const featured = items.filter((i) => i.featured && searchMatches(i) && (filter === 'all' || filter === 'featured'));
@@ -385,7 +413,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
     if (tableNumber.trim()) msg += `📍 Table: *${tableNumber.trim()}*\n`;
     msg += `─────────────────────────\n`;
     orderList.forEach((e) => {
-      msg += `• ${e.count}x ${e.item.name} (${money(e.item.price * e.count, cur)})\n`;
+      msg += `• ${e.count}x ${getDishName(e.item, lang)} (${money(e.item.price * e.count, cur)})\n`;
     });
     msg += `─────────────────────────\n`;
     msg += `💵 *Total Bill: ${money(totalOrderAmount, cur)}*\n`;
@@ -406,7 +434,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
     const tbl = tableNumber.trim() ? tableNumber.trim() : 'Guest';
     const template =
       restaurant.whatsappMessageTemplate || 'Hello, I would like to order {dish} for Table {table}.';
-    const msg = template.replace(/\{dish\}/g, dish.name).replace(/\{table\}/g, tbl);
+    const msg = template.replace(/\{dish\}/g, getDishName(dish, lang)).replace(/\{table\}/g, tbl);
     const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, '_blank', 'noopener,noreferrer');
   };
@@ -428,7 +456,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
   };
 
   return (
-      <div className="guest guest-dark" style={accentStyle(restaurant.accent)}>
+      <div className="guest guest-dark" style={accentStyle(restaurant.accent)} dir={isRtl ? 'rtl' : 'ltr'} data-lang={lang}>
         {/* Luxury Hero Header */}
         <header
             className="g-hero"
@@ -443,6 +471,70 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
             }
         >
           <div className="g-hero-top-actions">
+            {/* Multi-Language Switcher */}
+            <div className="g-lang-switcher" style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="g-action-pill g-lang-pill"
+                onClick={() => setShowLangMenu((v) => !v)}
+                aria-label="Change Language"
+                title="Change Menu Language"
+              >
+                <Globe size={14} />
+                <span>{TRANSLATIONS[lang].nativeName}</span>
+              </button>
+              {showLangMenu && (
+                <div
+                  className="g-lang-dropdown"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 6px)',
+                    right: isRtl ? 'auto' : 0,
+                    left: isRtl ? 0 : 'auto',
+                    background: 'rgba(18, 22, 30, 0.98)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '10px',
+                    padding: '6px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    zIndex: 100,
+                    boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+                    minWidth: '130px'
+                  }}
+                >
+                  {(['en', 'ur', 'ar'] as SupportedLang[]).map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => {
+                        switchLang(l);
+                        setShowLangMenu(false);
+                      }}
+                      style={{
+                        background: lang === l ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        color: lang === l ? 'var(--accent)' : 'var(--ink)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '13px',
+                        fontWeight: lang === l ? 600 : 400,
+                        textAlign: isRtl ? 'right' : 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <span>{TRANSLATIONS[l].nativeName}</span>
+                      {lang === l && <Check size={13} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
                 type="button"
                 className="g-action-pill g-service-pill"
@@ -451,11 +543,11 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                 title="Call server or request water"
             >
               <Bell size={14} />
-              <span>Service</span>
+              <span>{t.service}</span>
             </button>
             <button type="button" className="g-action-pill" onClick={() => setShowShare(true)} aria-label="Share Menu">
               <Share2 size={14} />
-              <span>Share</span>
+              <span>{t.share}</span>
             </button>
             {(restaurant.wifiName || restaurant.wifiPassword) && (
                 <button
@@ -465,7 +557,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                     aria-label="Guest Wi-Fi"
                 >
                   <Wifi size={14} />
-                  <span>Wi-Fi</span>
+                  <span>{t.wifi}</span>
                 </button>
             )}
           </div>
@@ -580,7 +672,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
             <Search size={16} aria-hidden />
             <input
                 type="search"
-                placeholder="Search appetizers, wagyu, pasta, wine…"
+                placeholder={t.searchPlaceholder}
                 aria-label="Search the menu"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -594,7 +686,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
 
           {/* Quick Filter Badges (3D, Specials, Dietary) */}
           <div className="g-filter-bar" role="group" aria-label="Quick filters">
-            {FILTERS.map((f) => (
+            {filtersList.map((f) => (
                 <button
                     key={f.key}
                     type="button"
@@ -692,22 +784,22 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                             onKeyDown={onActivate(() => open(i))}
                             role="button"
                             tabIndex={0}
-                            aria-label={`${i.name}, ${money(i.price, cur)}`}
+                            aria-label={`${getDishName(i, lang)}, ${money(i.price, cur)}`}
                         >
                           <div className="g-feature-img">
-                            <Photo src={assetUrl(i.imageUrl)} alt={i.name} />
+                            <Photo src={assetUrl(i.imageUrl)} alt={getDishName(i, lang)} />
                             {i.modelUrl ? (
                                 <span className="badge-3d badge-3d-glow">
                           <Box size={12} />
-                          <span>3D & AR</span>
+                          <span>{t.threeDModels}</span>
                         </span>
                             ) : (
-                                <span className="badge-signature">Signature</span>
+                                <span className="badge-signature">{t.featuredBadge}</span>
                             )}
                           </div>
                           <div className="g-feature-info">
-                            <strong className="g-feature-name">{i.name}</strong>
-                            {i.description && <p className="g-feature-desc">{i.description}</p>}
+                            <strong className="g-feature-name">{getDishName(i, lang)}</strong>
+                            {getDishDescription(i, lang) && <p className="g-feature-desc">{getDishDescription(i, lang)}</p>}
                             <div className="g-feature-foot" onClick={(e) => e.stopPropagation()}>
                               <b className="g-feature-price">{money(i.price, cur)}</b>
                               <div className="g-feature-order-ctrl">
@@ -715,12 +807,12 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                                   <button
                                     type="button"
                                     className="btn-row-whatsapp"
-                                    title="Order via WhatsApp"
+                                    title={t.orderViaWhatsApp}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       orderDishWhatsApp(i);
                                     }}
-                                    aria-label={`Order ${i.name} via WhatsApp`}
+                                    aria-label={`Order ${getDishName(i, lang)} via WhatsApp`}
                                   >
                                     <MessageCircle size={14} />
                                   </button>
@@ -753,7 +845,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                                         disabled={!i.available}
                                     >
                                         <Plus size={14} />
-                                        <span>Add</span>
+                                        <span>{t.addToOrder}</span>
                                     </button>
                                 )}
                               </div>
@@ -789,7 +881,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                             <div className="g-row-main">
                               <div className="g-row-text">
                                 <div className="g-row-title">
-                                  <strong>{i.name}</strong>
+                                  <strong>{getDishName(i, lang)}</strong>
                                   {i.modelUrl && (
                                       <span className="badge-3d-inline">
                                 <Box size={11} /> 3D
@@ -801,16 +893,16 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                               </span>
                                   )}
                                 </div>
-                                {i.description && <p className="g-desc">{i.description}</p>}
+                                {getDishDescription(i, lang) && <p className="g-desc">{getDishDescription(i, lang)}</p>}
                                 {i.modelUrl && i.available && (
                                     <span className="g-3d-hint">
-                              <Box size={12} /> Tap to view in 3D
+                              <Box size={12} /> {t.viewIn3D}
                             </span>
                                 )}
                               </div>
 
                               <div className="g-row-img-wrap">
-                                <Photo src={assetUrl(i.imageUrl)} alt={i.name} />
+                                <Photo src={assetUrl(i.imageUrl)} alt={getDishName(i, lang)} />
                                 {i.modelUrl && (
                                     <span className="badge-3d badge-3d-corner">
                               <Box size={11} /> 3D
@@ -822,7 +914,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                             <div className="g-row-bottom" onClick={(e) => e.stopPropagation()}>
                               <div className="g-meta">
                                 <b className="g-price">{money(i.price, cur)}</b>
-                                {!i.available && <Chip tone="chili">Sold out</Chip>}
+                                {!i.available && <Chip tone="chili">{t.soldOut}</Chip>}
                                 {parseTags(i.tags)
                                     .slice(0, 3)
                                     .map((t) => (
@@ -837,12 +929,12 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                                   <button
                                     type="button"
                                     className="btn-row-whatsapp"
-                                    title="Order via WhatsApp"
+                                    title={t.orderViaWhatsApp}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       orderDishWhatsApp(i);
                                     }}
-                                    aria-label={`Order ${i.name} via WhatsApp`}
+                                    aria-label={`Order ${getDishName(i, lang)} via WhatsApp`}
                                   >
                                     <MessageCircle size={14} />
                                   </button>
@@ -875,7 +967,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
                                         disabled={!i.available}
                                     >
                                       <Plus size={14} />
-                                      <span>Add</span>
+                                      <span>{t.addToOrder}</span>
                                     </button>
                                 )}
                               </div>
@@ -958,6 +1050,7 @@ function GuestView({ restaurant, items, slug, preview }: ViewProps) {
             onModelView={(id) => track('MODEL_VIEW', id)}
             onAr={(id) => track('AR_LAUNCH', id)}
             onAddToOrder={(i) => addToOrder(i)}
+            lang={lang}
         />
 
         {/* Interactive Chef's Mystery Roulette Modal */}
@@ -1344,7 +1437,8 @@ function DishSheet({
                      onClose,
                      onModelView,
                      onAr,
-                     onAddToOrder
+                     onAddToOrder,
+                     lang = 'en'
                    }: {
   item: PublicItem | null;
   allItems: PublicItem[];
@@ -1356,7 +1450,9 @@ function DishSheet({
   onModelView: (id: string) => void;
   onAr: (id: string) => void;
   onAddToOrder: (item: PublicItem) => void;
+  lang?: SupportedLang;
 }) {
+  const t = TRANSLATIONS[lang || 'en'];
   const viewer = useRef<ModelViewerHandle>(null);
   const [arHint, setArHint] = useState(false);
   const [last, setLast] = useState<PublicItem | null>(null);
@@ -1373,6 +1469,8 @@ function DishSheet({
   }, [item]);
 
   const shown = item ?? last;
+  const dishTitle = shown ? getDishName(shown, lang) : 'Dish';
+  const dishDesc = shown ? getDishDescription(shown, lang) : '';
 
   // Smart pairing suggestion: find a complementary dish from another category
   const pairing = useMemo(() => {
@@ -1383,7 +1481,7 @@ function DishSheet({
   }, [allItems, shown, orderedIds]);
 
   return (
-      <Dialog open={Boolean(item)} onClose={onClose} variant="sheet" label={shown?.name ?? 'Dish'}>
+      <Dialog open={Boolean(item)} onClose={onClose} variant="sheet" label={dishTitle}>
         {shown && (
             <div className="sheet sheet-dark">
               {/* Sticky Header with Drag Handle & Close Button */}
@@ -1404,7 +1502,7 @@ function DishSheet({
                             ref={viewer}
                             className="stage-model"
                             src={assetUrl(shown.modelUrl)!}
-                            alt={`3D model of ${shown.name}`}
+                            alt={`3D model of ${dishTitle}`}
                             scale={shown.modelScale ?? 1.0}
                             placement={activePlacement}
                             showControls={true}
@@ -1417,7 +1515,7 @@ function DishSheet({
                       </>
                   ) : (
                       <div className="stage-photo-full">
-                        <Photo src={assetUrl(shown.imageUrl)} alt={shown.name} />
+                        <Photo src={assetUrl(shown.imageUrl)} alt={dishTitle} />
                       </div>
                   )}
                 </div>
@@ -1439,7 +1537,7 @@ function DishSheet({
                             className={`plating-pill ${activePlacement === 'slate' ? 'on' : ''}`}
                             onClick={() => setActivePlacement('slate')}
                         >
-                          🪨 Slate
+                          ⬛ Slate
                         </button>
                         <button
                             type="button"
@@ -1462,20 +1560,20 @@ function DishSheet({
                 {/* Dish Information & Action Details */}
                 <div className="sheet-body">
                   <div className="sheet-title">
-                    <h2>{shown.name}</h2>
+                    <h2>{dishTitle}</h2>
                     <b className="sheet-price">{money(shown.price, currency)}</b>
                   </div>
 
                   <div className="sheet-tags">
-                    {!shown.available && <Chip tone="chili">Sold out</Chip>}
-                    {parseTags(shown.tags).map((t) => (
-                        <span key={t} className="g-diet-tag">
-                    {t}
+                    {!shown.available && <Chip tone="chili">{t.soldOut}</Chip>}
+                    {parseTags(shown.tags).map((tag) => (
+                        <span key={tag} className="g-diet-tag">
+                    {tag}
                   </span>
                     ))}
                   </div>
 
-                  {shown.description && <p className="sheet-desc">{shown.description}</p>}
+                  {dishDesc && <p className="sheet-desc">{dishDesc}</p>}
 
                   {/* AR Button */}
                   {shown.modelUrl ? (
@@ -1490,7 +1588,7 @@ function DishSheet({
                               else setArHint(true);
                             }}
                         >
-                          View on your table (AR)
+                          {t.viewInAR}
                         </Button>
                         <p className="sheet-hint" role={arHint ? 'alert' : undefined}>
                           {arHint
@@ -1511,10 +1609,10 @@ function DishSheet({
                         </div>
                         <div className="pairing-card-body">
                           <div className="pairing-card-img">
-                            <Photo src={assetUrl(pairing.imageUrl)} alt={pairing.name} />
+                            <Photo src={assetUrl(pairing.imageUrl)} alt={getDishName(pairing, lang)} />
                           </div>
                           <div className="pairing-card-info">
-                            <strong>{pairing.name}</strong>
+                            <strong>{getDishName(pairing, lang)}</strong>
                             <span>+{money(pairing.price, currency)}</span>
                           </div>
                           <button
@@ -1524,7 +1622,7 @@ function DishSheet({
                                 onAddToOrder(pairing);
                               }}
                           >
-                            <Plus size={13} /> Add Pairing
+                            <Plus size={13} /> {t.addToOrder}
                           </button>
                         </div>
                       </div>
@@ -1545,7 +1643,7 @@ function DishSheet({
                         onClose();
                       }}
                   >
-                    Add to Table Order · {money(shown.price, currency)}
+                    {t.addToOrder} · {money(shown.price, currency)}
                   </Button>
                   {whatsappOrderEnabled && onOrderWhatsApp && (
                     <button
@@ -1558,7 +1656,7 @@ function DishSheet({
                       }}
                     >
                       <MessageCircle size={17} />
-                      <span>Order via WhatsApp</span>
+                      <span>{t.orderViaWhatsApp}</span>
                     </button>
                   )}
                 </div>

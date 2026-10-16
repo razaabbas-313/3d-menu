@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ImagePlus, Trash2, X } from 'lucide-react';
+import { Box, Globe, ImagePlus, Trash2, X } from 'lucide-react';
 import { api, assetUrl, Item, ItemInput } from '../../lib/api';
 import { DEFAULT_CATEGORIES, parseTags } from '../../lib/format';
 import { navigate } from '../../lib/router';
@@ -20,6 +20,10 @@ export const toInput = (item: Item, overrides: Partial<ItemInput> = {}): ItemInp
   imageUrl: item.imageUrl,
   modelScale: item.modelScale ?? 1.0,
   modelPlacement: item.modelPlacement ?? 'plate',
+  nameUr: item.nameUr ?? null,
+  descriptionUr: item.descriptionUr ?? null,
+  nameAr: item.nameAr ?? null,
+  descriptionAr: item.descriptionAr ?? null,
   ...overrides
 });
 
@@ -44,6 +48,12 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
   const [featured, setFeatured] = useState(item?.featured ?? false);
   const [available, setAvailable] = useState(item?.available ?? true);
   const [published, setPublished] = useState(item?.published ?? true);
+  const [nameUr, setNameUr] = useState(item?.nameUr ?? '');
+  const [descriptionUr, setDescriptionUr] = useState(item?.descriptionUr ?? '');
+  const [nameAr, setNameAr] = useState(item?.nameAr ?? '');
+  const [descriptionAr, setDescriptionAr] = useState(item?.descriptionAr ?? '');
+  const [showTranslations, setShowTranslations] = useState(Boolean(item?.nameUr || item?.nameAr));
+  const [modelWarning, setModelWarning] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const [modelFile, setModelFile] = useState<File | null>(null);
@@ -79,6 +89,11 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
     if (!f.name.toLowerCase().endsWith('.glb')) return setError('Choose a 3D model in .glb format.');
     if (f.size > 25 * 1024 * 1024) return setError('3D model exceeds 25 MB. Choose a smaller one.');
     setError('');
+    if (f.size > 15 * 1024 * 1024) {
+      setModelWarning('Notice: This 3D model is over 15 MB. We recommend compressing with gltf-transform (Draco/KTX2) so mobile diners load it in under a second.');
+    } else {
+      setModelWarning('');
+    }
     setModelFile(f);
     setRemoveModel(false);
   }
@@ -103,7 +118,11 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
       published,
       imageUrl: removePhoto ? null : item?.imageUrl ?? null,
       modelScale: item?.modelScale ?? 1.0,
-      modelPlacement: item?.modelPlacement ?? 'plate'
+      modelPlacement: item?.modelPlacement ?? 'plate',
+      nameUr: nameUr.trim() || null,
+      descriptionUr: descriptionUr.trim() || null,
+      nameAr: nameAr.trim() || null,
+      descriptionAr: descriptionAr.trim() || null
     };
 
     let saved: Item;
@@ -187,6 +206,11 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
             )}
           </div>
 
+          {modelWarning && (
+            <div style={{ padding: '8px 12px', borderRadius: '8px', background: 'rgba(234, 179, 8, 0.12)', border: '1px solid rgba(234, 179, 8, 0.35)', color: '#facc15', fontSize: '12px', lineHeight: 1.4 }}>
+              {modelWarning}
+            </div>
+          )}
           <span className="field-hint" style={{ margin: 0 }}>
             Upload a .glb 3D asset (up to 25 MB). Guests can view it in 3D and project it life-size on their table in AR.
           </span>
@@ -203,6 +227,41 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
         <Field label="Description" hint={`${description.length}/700`}>
           <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value.slice(0, 700))} placeholder="Dry-aged beef, black truffle cream, toasted brioche." />
         </Field>
+
+        {/* Multi-language translations (Urdu & Arabic) */}
+        <div style={{ margin: '6px 0 14px 0', border: '1px solid var(--line)', borderRadius: '10px', overflow: 'hidden' }}>
+          <button
+            type="button"
+            onClick={() => setShowTranslations(!showTranslations)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'rgba(255,255,255,0.02)', border: 'none', color: 'var(--ink)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Globe size={15} style={{ color: 'var(--accent)' }} />
+              <span>Multi-Language Translations (Urdu & Arabic)</span>
+            </span>
+            <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>{showTranslations ? '▲ Hide' : '▼ Add / Edit'}</span>
+          </button>
+          {showTranslations && (
+            <div style={{ padding: '14px', background: 'rgba(255,255,255,0.01)', borderTop: '1px solid var(--line)', display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'grid', gap: '6px' }}>
+                <Field label="Urdu Name (نام)" hint="RTL">
+                  <Input dir="rtl" value={nameUr} onChange={(e) => setNameUr(e.target.value)} maxLength={140} placeholder="دی ٹرفل رائل" />
+                </Field>
+                <Field label="Urdu Description (تفصیل)" hint="RTL">
+                  <Textarea dir="rtl" rows={2} value={descriptionUr} onChange={(e) => setDescriptionUr(e.target.value.slice(0, 700))} placeholder="خشک بیف، بلیک ٹرفل کریم، چیڈر چیز..." />
+                </Field>
+              </div>
+              <div style={{ display: 'grid', gap: '6px' }}>
+                <Field label="Arabic Name (الاسم بالعربية)" hint="RTL">
+                  <Input dir="rtl" value={nameAr} onChange={(e) => setNameAr(e.target.value)} maxLength={140} placeholder="ذا ترافل رويال" />
+                </Field>
+                <Field label="Arabic Description (الوصف بالعربية)" hint="RTL">
+                  <Textarea dir="rtl" rows={2} value={descriptionAr} onChange={(e) => setDescriptionAr(e.target.value.slice(0, 700))} placeholder="لحم بقري معتق، كريمة الترافل الأسود..." />
+                </Field>
+              </div>
+            </div>
+          )}
+        </div>
 
         <fieldset className="tag-field">
           <legend>Labels</legend>

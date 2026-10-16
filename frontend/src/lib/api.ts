@@ -424,7 +424,8 @@ export const api = {
 
   // public (no auth header)
   publicMenu: async (slug: string): Promise<PublicMenu> => {
-    const assetBase = (import.meta.env.VITE_ASSET_BASE_URL || '').replace(/\/$/, '');
+    const defaultAssetBase = import.meta.env.DEV ? '' : 'https://atelier-ar-bucket.s3.ap-south-1.amazonaws.com';
+    const assetBase = (import.meta.env.VITE_ASSET_BASE_URL || defaultAssetBase).replace(/\/$/, '');
     const snapshotUrl = `${assetBase}/public/${encodeURIComponent(slug)}/menu.json`;
 
     // 1. Try static S3 / CDN snapshot first (zero wait for sleeping free-tier servers)

@@ -247,7 +247,11 @@ class MockStore {
       published: input.published,
       createdAt: new Date().toISOString(),
       modelScale: input.modelScale ?? 1.0,
-      modelPlacement: input.modelPlacement ?? 'plate'
+      modelPlacement: input.modelPlacement ?? 'plate',
+      nameUr: input.nameUr ?? null,
+      descriptionUr: input.descriptionUr ?? null,
+      nameAr: input.nameAr ?? null,
+      descriptionAr: input.descriptionAr ?? null
     };
     items.unshift(newItem);
     this.saveItems(items);
@@ -271,7 +275,11 @@ class MockStore {
       published: input.published,
       imageUrl: input.imageUrl !== undefined ? input.imageUrl : existing.imageUrl,
       modelScale: input.modelScale ?? existing.modelScale,
-      modelPlacement: input.modelPlacement ?? existing.modelPlacement
+      modelPlacement: input.modelPlacement ?? existing.modelPlacement,
+      nameUr: input.nameUr !== undefined ? input.nameUr : existing.nameUr,
+      descriptionUr: input.descriptionUr !== undefined ? input.descriptionUr : existing.descriptionUr,
+      nameAr: input.nameAr !== undefined ? input.nameAr : existing.nameAr,
+      descriptionAr: input.descriptionAr !== undefined ? input.descriptionAr : existing.descriptionAr
     };
     items[idx] = updated;
     this.saveItems(items);
