@@ -431,6 +431,22 @@ export const api = {
       return mockStore.getItems();
     }
   },
+  storageUsage: async () => {
+    try {
+      return await request<{ usedBytes: number; quotaBytes: number; usedMb: number; quotaMb: number; percentUsed: number }>('/restaurant/storage');
+    } catch (err) {
+      if (!isMock()) throw err;
+      return { usedBytes: 0, quotaBytes: 524288000, usedMb: 0, quotaMb: 500, percentUsed: 0 };
+    }
+  },
+  cleanupStorage: async () => {
+    try {
+      return await request<{ deletedFiles: number; freedBytes: number; currentUsedBytes: number; quotaBytes: number }>('/restaurant/storage/cleanup', { method: 'POST' });
+    } catch (err) {
+      if (!isMock()) throw err;
+      return { deletedFiles: 0, freedBytes: 0, currentUsedBytes: 0, quotaBytes: 524288000 };
+    }
+  },
 
   // items
   items: async () => {

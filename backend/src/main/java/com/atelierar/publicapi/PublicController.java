@@ -131,7 +131,8 @@ public class PublicController {
                 "bistrogourmet",
                 "dark",
                 true,
-                "Hello, I would like to order {dish} for Table {table}."
+                "Hello, I would like to order {dish} for Table {table}.",
+                List.of("Appetizers", "Main Courses", "Desserts", "Beverages")
         );
 
         UUID demoId = UUID.randomUUID();

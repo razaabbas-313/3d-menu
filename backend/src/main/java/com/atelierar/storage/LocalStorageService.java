@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -26,8 +27,8 @@ public class LocalStorageService implements StorageService {
     private final long quotaBytes;
 
     public LocalStorageService(@Value("${app.storage.dir:uploads}") String dir,
-                               @Value("${app.storage.max-model-mb:15}") long maxModelMb,
-                               @Value("${app.storage.quota-mb:100}") long quotaMb) throws IOException {
+                               @Value("${app.storage.max-model-mb:30}") long maxModelMb,
+                               @Value("${app.storage.quota-mb:500}") long quotaMb) throws IOException {
         this.root = Paths.get(dir).toAbsolutePath().normalize();
         this.maxModelBytes = maxModelMb * 1024L * 1024L;
         this.quotaBytes = quotaMb * 1024L * 1024L;
@@ -231,6 +232,48 @@ public class LocalStorageService implements StorageService {
             return key;
         }
         return PREFIX + (key.startsWith("/") ? key.substring(1) : key);
+    }
+
+    @Override
+    public long getQuotaBytes() {
+        return quotaBytes;
+    }
+
+    @Override
+    public String extractKey(String url) {
+        if (url == null || url.isBlank()) return null;
+        int q = url.indexOf('?');
+        String cleanUrl = q > 0 ? url.substring(0, q) : url;
+        if (cleanUrl.startsWith(PREFIX)) {
+            return cleanUrl.substring(PREFIX.length());
+        }
+        if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+            int idx = cleanUrl.indexOf(PREFIX);
+            if (idx >= 0) return cleanUrl.substring(idx + PREFIX.length());
+        }
+        return cleanUrl.startsWith("/") ? cleanUrl.substring(1) : cleanUrl;
+    }
+
+    @Override
+    public int cleanupOrphans(UUID restaurantId, java.util.Set<String> activeKeys) {
+        if (restaurantId == null) return 0;
+        Path restDir = root.resolve("restaurants").resolve(restaurantId.toString());
+        if (!Files.exists(restDir)) return 0;
+        int deleted = 0;
+        try (Stream<Path> stream = Files.walk(restDir)) {
+            List<Path> files = stream.filter(Files::isRegularFile).toList();
+            for (Path p : files) {
+                String relativeKey = root.relativize(p).toString().replace('\\', '/');
+                if (activeKeys == null || !activeKeys.contains(relativeKey)) {
+                    Files.deleteIfExists(p);
+                    log.info("Purged orphaned local asset for restaurant {}: {}", restaurantId, relativeKey);
+                    deleted++;
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Failed orphan cleanup for {}: {}", restaurantId, e.getMessage());
+        }
+        return deleted;
     }
 
     private void checkQuota(UUID restaurantId, long newBytes) {

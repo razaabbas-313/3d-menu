@@ -1,12 +1,14 @@
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Check,
   Copy,
+  Database,
   ExternalLink,
   ImagePlus,
   LogOut,
   MessageSquare,
   Palette,
+  RefreshCw,
   Save,
   Share2,
   Sparkles,
@@ -49,7 +51,29 @@ export function SettingsPage() {
   const [coverBusy, setCoverBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [storageData, setStorageData] = useState<{ usedBytes: number; quotaBytes: number; usedMb: number; quotaMb: number; percentUsed: number } | null>(null);
+  const [cleaning, setCleaning] = useState(false);
   const cover = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    api.storageUsage().then(setStorageData).catch(() => {});
+  }, []);
+
+  async function handleCleanup() {
+    setCleaning(true);
+    try {
+      const res = await api.cleanupStorage();
+      const freedMb = (res.freedBytes / (1024 * 1024)).toFixed(1);
+      toast.success(res.deletedFiles > 0
+        ? `Cleaned up ${res.deletedFiles} orphaned files (${freedMb} MB freed).`
+        : 'Storage is optimized. No orphaned files found.');
+      api.storageUsage().then(setStorageData).catch(() => {});
+    } catch (e) {
+      toast.error(errorMessage(e, 'Could not clean up storage.'));
+    } finally {
+      setCleaning(false);
+    }
+  }
 
   if (!restaurant) return null;
 
@@ -471,6 +495,44 @@ export function SettingsPage() {
                   Remove
                 </Button>
               )}
+            </div>
+          </section>
+
+          <section className="panel settings-storage-panel">
+            <div className="settings-section-head">
+              <div className="settings-section-icon">
+                <Database size={18} />
+              </div>
+              <div className="settings-section-titles">
+                <h2>Cloud Storage & 3D Quota</h2>
+                <p>AWS S3 asset allocation</p>
+              </div>
+            </div>
+            <div style={{ marginTop: '14px', display: 'grid', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                <span className="muted">Usage</span>
+                <strong>
+                  {storageData ? `${(storageData.usedBytes / (1024 * 1024)).toFixed(1)} MB / ${storageData.quotaMb} MB` : 'Calculating...'}
+                </strong>
+              </div>
+              <div style={{ width: '100%', height: '8px', background: 'var(--line)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    width: `${Math.min(100, Math.max(storageData?.usedBytes ? 2 : 0, storageData?.percentUsed ?? 0))}%`,
+                    height: '100%',
+                    background: (storageData?.percentUsed ?? 0) > 85 ? 'var(--chili)' : 'var(--accent)',
+                    transition: 'width 0.3s ease'
+                  }}
+                />
+              </div>
+              <p className="field-hint" style={{ marginTop: '4px' }}>
+                Includes dish images and optimized 3D GLB models on AWS CloudFront.
+              </p>
+              <div style={{ marginTop: '6px' }}>
+                <Button size="sm" variant="ghost" icon={<RefreshCw size={14} className={cleaning ? 'spin' : ''} />} onClick={handleCleanup} disabled={cleaning}>
+                  {cleaning ? 'Scanning & Purging...' : 'Purge Unused 3D Files'}
+                </Button>
+              </div>
             </div>
           </section>
 

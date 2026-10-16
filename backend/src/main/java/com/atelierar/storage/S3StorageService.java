@@ -45,8 +45,8 @@ public class S3StorageService implements StorageService {
                             @Value("${app.storage.s3.public-base-url:${S3_PUBLIC_BASE_URL:}}") String publicBaseUrl,
                             @Value("${aws.access-key-id:${AWS_ACCESS_KEY_ID:}}") String accessKeyId,
                             @Value("${aws.secret-access-key:${AWS_SECRET_ACCESS_KEY:}}") String secretAccessKey,
-                            @Value("${app.storage.max-model-mb:15}") long maxModelMb,
-                            @Value("${app.storage.quota-mb:100}") long quotaMb) {
+                            @Value("${app.storage.max-model-mb:30}") long maxModelMb,
+                            @Value("${app.storage.quota-mb:500}") long quotaMb) {
         this.region = region != null && !region.isBlank() ? region.trim() : "us-east-1";
         this.bucket = bucket != null ? bucket.trim() : "";
         String url = publicBaseUrl != null ? publicBaseUrl.trim() : "";
@@ -240,6 +240,14 @@ public class S3StorageService implements StorageService {
         try {
             s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
             log.debug("Deleted S3 object: {}", key);
+            if (key.startsWith("restaurants/")) {
+                String[] parts = key.split("/");
+                if (parts.length > 1) {
+                    try {
+                        usageCache.remove(UUID.fromString(parts[1]));
+                    } catch (IllegalArgumentException ignored) {}
+                }
+            }
         } catch (Exception e) {
             log.warn("Could not delete S3 object {}: {}", key, e.getMessage());
         }
@@ -360,6 +368,50 @@ public class S3StorageService implements StorageService {
                 .cacheControl(cacheControl)
                 .build();
         s3.putObject(req, RequestBody.fromBytes(content));
+
+        if (key.startsWith("restaurants/")) {
+            String[] parts = key.split("/");
+            if (parts.length > 1) {
+                try {
+                    usageCache.remove(UUID.fromString(parts[1]));
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+    }
+
+    @Override
+    public long getQuotaBytes() {
+        return quotaBytes;
+    }
+
+    @Override
+    public int cleanupOrphans(UUID restaurantId, java.util.Set<String> activeKeys) {
+        if (restaurantId == null || bucket.isEmpty()) return 0;
+        String prefix = "restaurants/" + restaurantId + "/";
+        int deleted = 0;
+        try {
+            ListObjectsV2Request req = ListObjectsV2Request.builder()
+                    .bucket(bucket)
+                    .prefix(prefix)
+                    .build();
+            ListObjectsV2Response res;
+            do {
+                res = s3.listObjectsV2(req);
+                for (S3Object obj : res.contents()) {
+                    String key = obj.key();
+                    if (activeKeys == null || !activeKeys.contains(key)) {
+                        s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+                        log.info("Purged orphaned S3 asset for restaurant {}: {} ({} bytes)", restaurantId, key, obj.size());
+                        deleted++;
+                    }
+                }
+                req = req.toBuilder().continuationToken(res.nextContinuationToken()).build();
+            } while (res.isTruncated());
+            usageCache.remove(restaurantId);
+        } catch (Exception e) {
+            log.warn("Error running orphan cleanup for restaurant {}: {}", restaurantId, e.getMessage());
+        }
+        return deleted;
     }
 
     @Override
@@ -376,7 +428,8 @@ public class S3StorageService implements StorageService {
         return "https://" + bucket + ".s3.amazonaws.com/" + key;
     }
 
-    private String extractKey(String url) {
+    @Override
+    public String extractKey(String url) {
         if (url == null || url.isBlank()) return null;
         int q = url.indexOf('?');
         String cleanUrl = q > 0 ? url.substring(0, q) : url;

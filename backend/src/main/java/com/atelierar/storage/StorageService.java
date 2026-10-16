@@ -55,4 +55,7 @@ public interface StorageService {
     String generatePresignedPutUrl(String key, String contentType, Duration duration);
 
     String toPublicUrl(String key);
+    long getQuotaBytes();
+    String extractKey(String url);
+    default int cleanupOrphans(UUID restaurantId, java.util.Set<String> activeKeys) { return 0; }
 }

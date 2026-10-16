@@ -18,9 +18,11 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Owner-facing CRUD. Every query is scoped to the signed-in owner's restaurant. */
@@ -154,18 +156,23 @@ public class MenuItemController {
             byte[] originalBytes = file.getBytes();
             long origSize = originalBytes.length;
 
-            // 1. Store original model privately in S3
-            String oldOriginal = item.getOriginalModelUrl();
-            originalUrl = storage.saveItemOriginalModel(item.getRestaurantId(), item.getId(), originalBytes, file.getOriginalFilename());
-
-            // 2. Optimize production copy using Draco and WebP pipeline (bypassed safely on 512MB RAM free instances)
+            // 1. Optimize copy using Draco and WebP pipeline (bypassed safely on 512MB RAM free instances)
             ModelOptimizationService.OptimizationResult optResult = modelOptimizer.optimize(originalBytes, file.getOriginalFilename());
 
-            // 3. Upload optimized model to public S3 / CloudFront location
+            String oldOriginal = item.getOriginalModelUrl();
             String oldModel = item.getModelUrl();
-            optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), optResult.optimizedBytes());
 
-            // 4. Update database item metadata
+            // 2. If optimization produced compressed bytes, keep both private original and public optimized.
+            // If optimization was bypassed/disabled, upload ONCE to cut latency, memory, and quota usage in half.
+            if (optResult.optimizedBytes() != originalBytes && optResult.optimizedBytes().length != originalBytes.length) {
+                originalUrl = storage.saveItemOriginalModel(item.getRestaurantId(), item.getId(), originalBytes, file.getOriginalFilename());
+                optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), optResult.optimizedBytes());
+            } else {
+                optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), originalBytes);
+                originalUrl = optimizedUrl;
+            }
+
+            // 3. Update database item metadata
             item.setModel(optimizedUrl, displayName(file.getOriginalFilename()));
             item.setOriginalModelUrl(originalUrl);
             item.setOriginalModelFileSize(origSize);
@@ -174,11 +181,15 @@ public class MenuItemController {
             item.setModelOptimizationNotes(optResult.notes());
             MenuItem saved = items.save(item);
 
-            // 5. Clean up old assets quietly
-            if (oldModel != null && !oldModel.equals(optimizedUrl)) storage.deleteQuietly(oldModel);
-            if (oldOriginal != null && !oldOriginal.equals(originalUrl)) storage.deleteQuietly(oldOriginal);
+            // 4. Clean up old assets quietly
+            if (oldModel != null && !oldModel.equals(optimizedUrl) && !oldModel.equals(originalUrl)) {
+                storage.deleteQuietly(oldModel);
+            }
+            if (oldOriginal != null && !oldOriginal.equals(originalUrl) && !oldOriginal.equals(optimizedUrl) && !oldOriginal.equals(oldModel)) {
+                storage.deleteQuietly(oldOriginal);
+            }
 
-            // 6. Update menu snapshot ONLY after asset is successfully processed
+            // 5. Update menu snapshot ONLY after asset is successfully processed
             if ("READY".equalsIgnoreCase(saved.getModelStatus())) {
                 snapshots.updateSnapshot(saved.getRestaurantId());
             }
@@ -187,7 +198,7 @@ public class MenuItemController {
         } catch (Exception e) {
             // Clean up any orphaned files uploaded during failed transaction
             if (originalUrl != null) storage.deleteQuietly(originalUrl);
-            if (optimizedUrl != null) storage.deleteQuietly(optimizedUrl);
+            if (optimizedUrl != null && !optimizedUrl.equals(originalUrl)) storage.deleteQuietly(optimizedUrl);
             // Revert state so dish is never stuck in PROCESSING on failure
             item.setModelStatus("READY");
             items.save(item);
@@ -207,6 +218,23 @@ public class MenuItemController {
         if (fileSizeNum != null && fileSizeNum.longValue() > maxModelBytes) {
             long maxMb = maxModelBytes / (1024 * 1024);
             throw StorageValidator.tooLarge("The 3D model is larger than " + maxMb + " MB. Compress it and try again.");
+        }
+
+        // Proactive quota check with automatic orphan cleanup
+        long estimatedSize = fileSizeNum != null ? fileSizeNum.longValue() : 0L;
+        if (estimatedSize > 0) {
+            long currentUsage = storage.getRestaurantStorageUsage(item.getRestaurantId());
+            if (currentUsage + estimatedSize > storage.getQuotaBytes()) {
+                Set<String> activeKeys = collectActiveKeys(restaurants.current());
+                int cleaned = storage.cleanupOrphans(item.getRestaurantId(), activeKeys);
+                if (cleaned > 0) {
+                    currentUsage = storage.getRestaurantStorageUsage(item.getRestaurantId());
+                }
+                if (currentUsage + estimatedSize > storage.getQuotaBytes()) {
+                    long quotaMb = storage.getQuotaBytes() / (1024 * 1024);
+                    throw StorageValidator.tooLarge("Storage quota exceeded (" + quotaMb + " MB limit). Delete unused dishes or models to free up space.");
+                }
+            }
         }
 
         String key = "restaurants/" + item.getRestaurantId() + "/items/" + item.getId() + "/" + UUID.randomUUID() + ".glb";
@@ -239,8 +267,10 @@ public class MenuItemController {
 
         String publicUrl = storage.toPublicUrl(key);
         String oldModel = item.getModelUrl();
+        String oldOriginal = item.getOriginalModelUrl();
 
         item.setModel(publicUrl, displayName(fileName));
+        item.setOriginalModelUrl(publicUrl);
         item.setModelFileSize(fileSize > 0 ? fileSize : null);
         item.setModelStatus("READY");
         item.setModelOptimizationNotes("Direct S3 upload");
@@ -248,6 +278,9 @@ public class MenuItemController {
 
         if (oldModel != null && !oldModel.equals(publicUrl)) {
             storage.deleteQuietly(oldModel);
+        }
+        if (oldOriginal != null && !oldOriginal.equals(publicUrl) && !oldOriginal.equals(oldModel)) {
+            storage.deleteQuietly(oldOriginal);
         }
 
         snapshots.updateSnapshot(saved.getRestaurantId());
@@ -363,5 +396,35 @@ public class MenuItemController {
 
     private static String blankToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
+    }
+
+    private Set<String> collectActiveKeys(Restaurant r) {
+        Set<String> keys = new HashSet<>();
+        if (r != null && r.getCoverUrl() != null) {
+            String k = storage.extractKey(r.getCoverUrl());
+            if (k != null) keys.add(k);
+        }
+        if (r != null) {
+            List<MenuItem> list = items.findByRestaurantIdOrderByCreatedAtDesc(r.getId());
+            for (MenuItem item : list) {
+                if (item.getImageUrl() != null) {
+                    String k = storage.extractKey(item.getImageUrl());
+                    if (k != null) keys.add(k);
+                }
+                if (item.getThumbnailUrl() != null) {
+                    String k = storage.extractKey(item.getThumbnailUrl());
+                    if (k != null) keys.add(k);
+                }
+                if (item.getModelUrl() != null) {
+                    String k = storage.extractKey(item.getModelUrl());
+                    if (k != null) keys.add(k);
+                }
+                if (item.getOriginalModelUrl() != null) {
+                    String k = storage.extractKey(item.getOriginalModelUrl());
+                    if (k != null) keys.add(k);
+                }
+            }
+        }
+        return keys;
     }
 }

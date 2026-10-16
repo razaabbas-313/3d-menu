@@ -16,7 +16,10 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/restaurant")
@@ -140,6 +143,59 @@ public class RestaurantController {
         List<MenuItem> created = items.saveAll(SampleMenu.build(r.getId()));
         snapshots.updateSnapshot(r.getId());
         return created.stream().map(Mappers::item).toList();
+    }
+
+    @GetMapping("/storage")
+    public Map<String, Object> getStorageUsage() {
+        Restaurant r = service.current();
+        long usedBytes = storage.getRestaurantStorageUsage(r.getId());
+        long quotaBytes = storage.getQuotaBytes();
+        long usedMb = usedBytes / (1024 * 1024);
+        long quotaMb = quotaBytes / (1024 * 1024);
+        return Map.of(
+                "usedBytes", usedBytes,
+                "quotaBytes", quotaBytes,
+                "usedMb", usedMb,
+                "quotaMb", quotaMb,
+                "percentUsed", quotaBytes > 0 ? (double) usedBytes / quotaBytes * 100.0 : 0.0
+        );
+    }
+
+    @PostMapping("/storage/cleanup")
+    public Map<String, Object> cleanupStorage() {
+        Restaurant r = service.current();
+        Set<String> activeKeys = new HashSet<>();
+        if (r.getCoverUrl() != null) {
+            String k = storage.extractKey(r.getCoverUrl());
+            if (k != null) activeKeys.add(k);
+        }
+        for (MenuItem item : items.findByRestaurantIdOrderByCreatedAtDesc(r.getId())) {
+            if (item.getImageUrl() != null) {
+                String k = storage.extractKey(item.getImageUrl());
+                if (k != null) activeKeys.add(k);
+            }
+            if (item.getThumbnailUrl() != null) {
+                String k = storage.extractKey(item.getThumbnailUrl());
+                if (k != null) activeKeys.add(k);
+            }
+            if (item.getModelUrl() != null) {
+                String k = storage.extractKey(item.getModelUrl());
+                if (k != null) activeKeys.add(k);
+            }
+            if (item.getOriginalModelUrl() != null) {
+                String k = storage.extractKey(item.getOriginalModelUrl());
+                if (k != null) activeKeys.add(k);
+            }
+        }
+        long beforeBytes = storage.getRestaurantStorageUsage(r.getId());
+        int deleted = storage.cleanupOrphans(r.getId(), activeKeys);
+        long afterBytes = storage.getRestaurantStorageUsage(r.getId());
+        return Map.of(
+                "deletedFiles", deleted,
+                "freedBytes", Math.max(0, beforeBytes - afterBytes),
+                "currentUsedBytes", afterBytes,
+                "quotaBytes", storage.getQuotaBytes()
+        );
     }
 
     private static String blankToNull(String s) {
