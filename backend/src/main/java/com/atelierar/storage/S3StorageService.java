@@ -26,6 +26,7 @@ public class S3StorageService implements StorageService {
 
     private final S3Client s3;
     private final String bucket;
+    private final String region;
     private final String publicBaseUrl;
     private final long maxModelBytes;
     private final long quotaBytes;
@@ -33,28 +34,44 @@ public class S3StorageService implements StorageService {
     public S3StorageService(@Value("${aws.region:${AWS_REGION:us-east-1}}") String region,
                             @Value("${app.storage.s3.bucket:${S3_BUCKET:}}") String bucket,
                             @Value("${app.storage.s3.public-base-url:${S3_PUBLIC_BASE_URL:}}") String publicBaseUrl,
+                            @Value("${aws.access-key-id:${AWS_ACCESS_KEY_ID:}}") String accessKeyId,
+                            @Value("${aws.secret-access-key:${AWS_SECRET_ACCESS_KEY:}}") String secretAccessKey,
                             @Value("${app.storage.max-model-mb:15}") long maxModelMb,
                             @Value("${app.storage.quota-mb:100}") long quotaMb) {
-        this.bucket = bucket.trim();
+        this.region = region != null && !region.isBlank() ? region.trim() : "us-east-1";
+        this.bucket = bucket != null ? bucket.trim() : "";
         String url = publicBaseUrl != null ? publicBaseUrl.trim() : "";
         if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
         this.publicBaseUrl = url;
         this.maxModelBytes = maxModelMb * 1024L * 1024L;
         this.quotaBytes = quotaMb * 1024L * 1024L;
 
+        software.amazon.awssdk.auth.credentials.AwsCredentialsProvider credentialsProvider;
+        if (accessKeyId != null && !accessKeyId.isBlank() && secretAccessKey != null && !secretAccessKey.isBlank()) {
+            credentialsProvider = software.amazon.awssdk.auth.credentials.StaticCredentialsProvider.create(
+                    software.amazon.awssdk.auth.credentials.AwsBasicCredentials.create(accessKeyId.trim(), secretAccessKey.trim())
+            );
+        } else {
+            credentialsProvider = DefaultCredentialsProvider.create();
+        }
+
         this.s3 = S3Client.builder()
-                .region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.create())
+                .region(Region.of(this.region))
+                .credentialsProvider(credentialsProvider)
                 .httpClientBuilder(UrlConnectionHttpClient.builder())
                 .build();
 
-        log.info("S3StorageService initialized for bucket '{}' (region: {}, publicBaseUrl: {})", bucket, region, this.publicBaseUrl);
+        log.info("S3StorageService initialized for bucket '{}' (region: {}, publicBaseUrl: {})", this.bucket, this.region, this.publicBaseUrl);
     }
 
-    // Constructor for testing with mock S3Client
     public S3StorageService(S3Client s3, String bucket, String publicBaseUrl, long maxModelMb, long quotaMb) {
+        this(s3, bucket, "us-east-1", publicBaseUrl, maxModelMb, quotaMb);
+    }
+
+    public S3StorageService(S3Client s3, String bucket, String region, String publicBaseUrl, long maxModelMb, long quotaMb) {
         this.s3 = s3;
-        this.bucket = bucket;
+        this.bucket = bucket != null ? bucket.trim() : "";
+        this.region = region != null && !region.isBlank() ? region.trim() : "us-east-1";
         this.publicBaseUrl = publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
         this.maxModelBytes = maxModelMb * 1024L * 1024L;
         this.quotaBytes = quotaMb * 1024L * 1024L;
@@ -200,6 +217,9 @@ public class S3StorageService implements StorageService {
         if (!publicBaseUrl.isEmpty()) {
             return publicBaseUrl + "/" + key;
         }
+        if (region != null && !region.isBlank() && !region.equalsIgnoreCase("us-east-1")) {
+            return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
+        }
         return "https://" + bucket + ".s3.amazonaws.com/" + key;
     }
 
@@ -207,6 +227,10 @@ public class S3StorageService implements StorageService {
         if (!publicBaseUrl.isEmpty() && url.startsWith(publicBaseUrl)) {
             String sub = url.substring(publicBaseUrl.length());
             return sub.startsWith("/") ? sub.substring(1) : sub;
+        }
+        String regionalPrefix = "https://" + bucket + ".s3." + region + ".amazonaws.com/";
+        if (url.startsWith(regionalPrefix)) {
+            return url.substring(regionalPrefix.length());
         }
         String s3Prefix = "https://" + bucket + ".s3.amazonaws.com/";
         if (url.startsWith(s3Prefix)) {

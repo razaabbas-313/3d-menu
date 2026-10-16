@@ -18,9 +18,11 @@ public class StorageConfig {
             @Value("${aws.region:${AWS_REGION:us-east-1}}") String region,
             @Value("${app.storage.s3.bucket:${S3_BUCKET:}}") String bucket,
             @Value("${app.storage.s3.public-base-url:${S3_PUBLIC_BASE_URL:}}") String publicBaseUrl,
+            @Value("${aws.access-key-id:${AWS_ACCESS_KEY_ID:}}") String accessKeyId,
+            @Value("${aws.secret-access-key:${AWS_SECRET_ACCESS_KEY:}}") String secretAccessKey,
             @Value("${app.storage.max-model-mb:15}") long maxModelMb,
             @Value("${app.storage.quota-mb:100}") long quotaMb) {
-        return new S3StorageService(region, bucket, publicBaseUrl, maxModelMb, quotaMb);
+        return new S3StorageService(region, bucket, publicBaseUrl, accessKeyId, secretAccessKey, maxModelMb, quotaMb);
     }
 
     @Bean
