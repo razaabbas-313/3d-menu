@@ -275,11 +275,13 @@ function upload<T>(path: string, file: File, onProgress?: (fraction: number) => 
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${BASE}/api/v1${path}`);
+    xhr.timeout = 180000; // 3 minutes for larger 3D model uploads
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress?.(e.loaded / e.total);
     };
-    xhr.onerror = () => reject(new ApiError(0, NETWORK_MESSAGE));
+    xhr.ontimeout = () => reject(new ApiError(408, 'Upload timed out. The file may be too large or the internet connection is slow.'));
+    xhr.onerror = () => reject(new ApiError(0, 'Cannot reach the server. The backend may be restarting or processing a heavy task. Please retry in a few moments.'));
     xhr.onload = async () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {

@@ -148,39 +148,46 @@ public class MenuItemController {
         item.setModelFileName(displayName(file.getOriginalFilename()));
         items.save(item);
 
-        byte[] originalBytes = file.getBytes();
-        long origSize = originalBytes.length;
+        try {
+            byte[] originalBytes = file.getBytes();
+            long origSize = originalBytes.length;
 
-        // 1. Store original model privately in S3
-        String oldOriginal = item.getOriginalModelUrl();
-        String originalUrl = storage.saveItemOriginalModel(item.getRestaurantId(), item.getId(), originalBytes, file.getOriginalFilename());
+            // 1. Store original model privately in S3
+            String oldOriginal = item.getOriginalModelUrl();
+            String originalUrl = storage.saveItemOriginalModel(item.getRestaurantId(), item.getId(), originalBytes, file.getOriginalFilename());
 
-        // 2. Optimize production copy using Draco and WebP pipeline
-        ModelOptimizationService.OptimizationResult optResult = modelOptimizer.optimize(originalBytes, file.getOriginalFilename());
+            // 2. Optimize production copy using Draco and WebP pipeline (bypassed safely on 512MB RAM free instances)
+            ModelOptimizationService.OptimizationResult optResult = modelOptimizer.optimize(originalBytes, file.getOriginalFilename());
 
-        // 3. Upload optimized model to public S3 / CloudFront location
-        String oldModel = item.getModelUrl();
-        String optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), optResult.optimizedBytes());
+            // 3. Upload optimized model to public S3 / CloudFront location
+            String oldModel = item.getModelUrl();
+            String optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), optResult.optimizedBytes());
 
-        // 4. Update database item metadata
-        item.setModel(optimizedUrl, displayName(file.getOriginalFilename()));
-        item.setOriginalModelUrl(originalUrl);
-        item.setOriginalModelFileSize(origSize);
-        item.setModelFileSize(optResult.optimizedSize());
-        item.setModelStatus(optResult.status());
-        item.setModelOptimizationNotes(optResult.notes());
-        MenuItem saved = items.save(item);
+            // 4. Update database item metadata
+            item.setModel(optimizedUrl, displayName(file.getOriginalFilename()));
+            item.setOriginalModelUrl(originalUrl);
+            item.setOriginalModelFileSize(origSize);
+            item.setModelFileSize(optResult.optimizedSize());
+            item.setModelStatus(optResult.status());
+            item.setModelOptimizationNotes(optResult.notes());
+            MenuItem saved = items.save(item);
 
-        // 5. Clean up old assets quietly
-        if (oldModel != null && !oldModel.equals(optimizedUrl)) storage.deleteQuietly(oldModel);
-        if (oldOriginal != null && !oldOriginal.equals(originalUrl)) storage.deleteQuietly(oldOriginal);
+            // 5. Clean up old assets quietly
+            if (oldModel != null && !oldModel.equals(optimizedUrl)) storage.deleteQuietly(oldModel);
+            if (oldOriginal != null && !oldOriginal.equals(originalUrl)) storage.deleteQuietly(oldOriginal);
 
-        // 6. Update menu snapshot ONLY after asset is successfully processed
-        if ("READY".equalsIgnoreCase(saved.getModelStatus())) {
-            snapshots.updateSnapshot(saved.getRestaurantId());
+            // 6. Update menu snapshot ONLY after asset is successfully processed
+            if ("READY".equalsIgnoreCase(saved.getModelStatus())) {
+                snapshots.updateSnapshot(saved.getRestaurantId());
+            }
+
+            return Mappers.item(saved);
+        } catch (Exception e) {
+            // Revert state so dish is never stuck in PROCESSING on failure
+            item.setModelStatus("READY");
+            items.save(item);
+            throw e;
         }
-
-        return Mappers.item(saved);
     }
 
     @DeleteMapping("/{id}/model")
