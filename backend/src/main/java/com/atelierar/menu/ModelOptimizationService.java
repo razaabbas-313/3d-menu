@@ -147,11 +147,18 @@ public class ModelOptimizationService {
             cmd.add("cmd.exe");
             cmd.add("/c");
             cmd.add("npx.cmd");
+            cmd.add("@gltf-transform/cli");
         } else {
-            cmd.add("npx");
+            // Check if gltf-transform is installed in PATH directly (avoids npx overhead and excessive memory)
+            boolean hasGlobalCli = new File("/usr/local/bin/gltf-transform").exists() || new File("/usr/bin/gltf-transform").exists();
+            if (hasGlobalCli) {
+                cmd.add("gltf-transform");
+            } else {
+                cmd.add("npx");
+                cmd.add("--no-install");
+                cmd.add("@gltf-transform/cli");
+            }
         }
-
-        cmd.add("@gltf-transform/cli");
         cmd.add("optimize");
         cmd.add(inputPath);
         cmd.add(outputPath);

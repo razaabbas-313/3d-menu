@@ -199,10 +199,11 @@ async function readError(status: number, text: string): Promise<ApiError> {
   if (!message) {
     message =
       status === 401 ? 'Please sign in again.' :
-      status === 403 ? 'The server refused this request (403). If you are running locally, open the site at http://localhost:5173 and make sure the backend is the latest version.' :
+      status === 403 ? 'The server refused this request (403).' :
       status === 404 ? 'We could not find that.' :
-      status === 413 ? 'That file is too large.' :
+      status === 413 ? 'That file is too large. Models can be up to 15 MB.' :
       status === 429 ? 'Too many requests. Please wait a moment.' :
+      status === 502 || status === 503 || status === 504 ? 'The backend server is waking up or temporarily restarting. Please retry in a few seconds.' :
       status >= 500 ? 'The server had a problem. Please try again.' :
       `Request failed (${status}).`;
   }
@@ -270,6 +271,8 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 import { mockStore } from './mockStore';
 
+const isMock = () => !token || token === 'mock-token-session';
+
 export const api = {
   // auth
   register: async (b: { email: string; password: string; restaurantName: string; city: string }) => {
@@ -325,21 +328,24 @@ export const api = {
   }) => {
     try {
       return await request<Restaurant>('/restaurant', json('PUT', b));
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.updateRestaurant(b);
     }
   },
   publish: async (value: boolean) => {
     try {
       return await request<Restaurant>(`/restaurant/publish?value=${value}`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.updateRestaurant({ published: value });
     }
   },
   uploadCover: async (file: File, onProgress?: (f: number) => void) => {
     try {
       return await upload<Restaurant>('/restaurant/cover', file, onProgress);
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       onProgress?.(1);
       return mockStore.uploadCover(file);
     }
@@ -347,14 +353,16 @@ export const api = {
   removeCover: async () => {
     try {
       return await request<Restaurant>('/restaurant/cover', { method: 'DELETE' });
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.removeCover();
     }
   },
   addSampleMenu: async () => {
     try {
       return await request<Item[]>('/restaurant/sample-menu', { method: 'POST' });
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.getItems();
     }
   },
@@ -363,35 +371,40 @@ export const api = {
   items: async () => {
     try {
       return await request<Item[]>('/items');
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.getItems();
     }
   },
   createItem: async (b: ItemInput) => {
     try {
       return await request<Item>('/items', json('POST', b));
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.createItem(b);
     }
   },
   updateItem: async (id: string, b: ItemInput) => {
     try {
       return await request<Item>(`/items/${id}`, json('PUT', b));
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.updateItem(id, b);
     }
   },
   deleteItem: async (id: string) => {
     try {
       return await request<void>(`/items/${id}`, { method: 'DELETE' });
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       mockStore.deleteItem(id);
     }
   },
   uploadImage: async (id: string, file: File, onProgress?: (f: number) => void) => {
     try {
       return await upload<Item>(`/items/${id}/image`, file, onProgress);
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       onProgress?.(1);
       return mockStore.uploadItemImage(id, file);
     }
@@ -399,7 +412,8 @@ export const api = {
   uploadModel: async (id: string, file: File, onProgress?: (f: number) => void) => {
     try {
       return await upload<Item>(`/items/${id}/model`, file, onProgress);
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       onProgress?.(1);
       return mockStore.uploadItemModel(id, file);
     }
@@ -407,7 +421,8 @@ export const api = {
   removeModel: async (id: string) => {
     try {
       return await request<Item>(`/items/${id}/model`, { method: 'DELETE' });
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.removeItemModel(id);
     }
   },
@@ -417,14 +432,16 @@ export const api = {
       if (scale !== undefined && scale !== null) params.set('scale', String(scale));
       if (placement) params.set('placement', placement);
       return await request<Item>(`/items/${id}/model-tuning?${params.toString()}`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.tuneModel(id, scale ?? 1.0, placement ?? 'plate');
     }
   },
   getOriginalModelUrl: async (id: string) => {
     try {
       return await request<{ url: string }>(`/items/${id}/original-model-url`);
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return { url: '' };
     }
   },
