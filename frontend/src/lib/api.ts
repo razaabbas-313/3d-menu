@@ -151,8 +151,21 @@ export class ApiError extends Error {
   }
 }
 
-const BASE = (import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+const PRODUCTION_API = 'https://atelier-api-jyit.onrender.com';
+const BASE = (
+  import.meta.env.VITE_API_URL ??
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.PROD ? PRODUCTION_API : '')
+).replace(/\/$/, '');
 const TOKEN_KEY = 'atelier.token';
+
+if (typeof window !== 'undefined') {
+  // Pre-warm backend immediately on page load to eliminate cold-start delay for users
+  const warmUrl = (BASE || PRODUCTION_API) + '/health';
+  try {
+    fetch(warmUrl, { mode: 'no-cors', keepalive: true }).catch(() => {});
+  } catch {}
+}
 
 let token: string | null = null;
 try {
@@ -212,6 +225,10 @@ async function readError(status: number, text: string): Promise<ApiError> {
 
 const NETWORK_MESSAGE = 'Cannot reach the server. Check that the backend is running and try again.';
 
+async function delay(ms: number): Promise<void> {
+  return new Promise((res) => setTimeout(res, ms));
+}
+
 async function request<T>(path: string, init: RequestInit = {}, opts: { publicCall?: boolean } = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -219,22 +236,39 @@ async function request<T>(path: string, init: RequestInit = {}, opts: { publicCa
   }
   if (token && !opts.publicCall) headers.set('Authorization', `Bearer ${token}`);
 
-  let response: Response;
-  try {
-    response = await fetch(`${BASE}/api/v1${path}`, { ...init, headers });
-  } catch {
-    throw new ApiError(0, NETWORK_MESSAGE);
-  }
-  if (!response.ok) {
-    const error = await readError(response.status, await response.text());
-    const isAuthCall = path.startsWith('/auth/login') || path.startsWith('/auth/register');
-    if (response.status === 401 && token && !isAuthCall && !opts.publicCall) {
-      window.dispatchEvent(new CustomEvent('atelier:unauthorized'));
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(`${BASE}/api/v1${path}`, { ...init, headers });
+    } catch {
+      if (attempt < maxAttempts) {
+        await delay(attempt * 2000);
+        continue;
+      }
+      throw new ApiError(0, NETWORK_MESSAGE);
     }
-    throw error;
+
+    if (!response.ok) {
+      // If server is cold-starting (502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout), wait and retry
+      if ((response.status === 502 || response.status === 503 || response.status === 504) && attempt < maxAttempts) {
+        await delay(attempt * 2500);
+        continue;
+      }
+
+      const error = await readError(response.status, await response.text());
+      const isAuthCall = path.startsWith('/auth/login') || path.startsWith('/auth/register');
+      if (response.status === 401 && token && !isAuthCall && !opts.publicCall) {
+        window.dispatchEvent(new CustomEvent('atelier:unauthorized'));
+      }
+      throw error;
+    }
+
+    if (response.status === 204) return undefined as T;
+    return (await response.json()) as T;
   }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+
+  throw new ApiError(0, NETWORK_MESSAGE);
 }
 
 function upload<T>(path: string, file: File, onProgress?: (fraction: number) => void): Promise<T> {
@@ -278,30 +312,39 @@ export const api = {
   register: async (b: { email: string; password: string; restaurantName: string; city: string }) => {
     try {
       return await request<{ token: string; user: User; restaurant: Restaurant }>('/auth/register', json('POST', b));
-    } catch {
-      const user = mockStore.getUser();
-      user.email = b.email;
-      const restaurant = mockStore.updateRestaurant({ name: b.restaurantName, city: b.city });
-      auth.set('mock-token-session');
-      return { token: 'mock-token-session', user, restaurant };
+    } catch (err) {
+      if (!BASE && !import.meta.env.PROD) {
+        const user = mockStore.getUser();
+        user.email = b.email;
+        const restaurant = mockStore.updateRestaurant({ name: b.restaurantName, city: b.city });
+        auth.set('mock-token-session');
+        return { token: 'mock-token-session', user, restaurant };
+      }
+      throw err;
     }
   },
   login: async (b: { email: string; password: string }) => {
     try {
       return await request<{ token: string; user: User; restaurant: Restaurant }>('/auth/login', json('POST', b));
-    } catch {
-      const user = mockStore.getUser();
-      user.email = b.email;
-      const restaurant = mockStore.getRestaurant();
-      auth.set('mock-token-session');
-      return { token: 'mock-token-session', user, restaurant };
+    } catch (err) {
+      if (!BASE && !import.meta.env.PROD) {
+        const user = mockStore.getUser();
+        user.email = b.email;
+        const restaurant = mockStore.getRestaurant();
+        auth.set('mock-token-session');
+        return { token: 'mock-token-session', user, restaurant };
+      }
+      throw err;
     }
   },
   me: async () => {
     try {
       return await request<{ user: User; restaurant: Restaurant }>('/auth/me');
-    } catch {
-      return { user: mockStore.getUser(), restaurant: mockStore.getRestaurant() };
+    } catch (err) {
+      if (token === 'mock-token-session' || (!BASE && !import.meta.env.PROD)) {
+        return { user: mockStore.getUser(), restaurant: mockStore.getRestaurant() };
+      }
+      throw err;
     }
   },
 
