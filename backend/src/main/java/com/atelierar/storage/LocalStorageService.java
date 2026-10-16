@@ -197,12 +197,40 @@ public class LocalStorageService implements StorageService {
     }
 
     @Override
+    public void deletePublicSnapshot(String slug) {
+        if (slug == null || slug.isBlank()) return;
+        try {
+            Path target = root.resolve("public").resolve(slug).resolve("menu.json").normalize();
+            if (target.startsWith(root)) {
+                Files.deleteIfExists(target);
+                log.info("Deleted local public snapshot: {}", target);
+            }
+        } catch (IOException | RuntimeException e) {
+            log.warn("Could not delete local public snapshot {}: {}", slug, e.getMessage());
+        }
+    }
+
+    @Override
+    public String generatePresignedPutUrl(String key, String contentType, Duration duration) {
+        return null; // Direct S3 presigned PUT is only active when S3 storage provider is configured
+    }
+
+    @Override
     public String generatePresignedGetUrl(String urlOrKey, Duration duration) {
         if (urlOrKey == null || urlOrKey.isBlank()) return urlOrKey;
         if (urlOrKey.startsWith("http://") || urlOrKey.startsWith("https://") || urlOrKey.startsWith(PREFIX)) {
             return urlOrKey;
         }
         return PREFIX + urlOrKey;
+    }
+
+    @Override
+    public String toPublicUrl(String key) {
+        if (key == null || key.isBlank()) return "";
+        if (key.startsWith("http://") || key.startsWith("https://") || key.startsWith(PREFIX)) {
+            return key;
+        }
+        return PREFIX + (key.startsWith("/") ? key.substring(1) : key);
     }
 
     private void checkQuota(UUID restaurantId, long newBytes) {

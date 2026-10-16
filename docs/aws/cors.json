@@ -5,7 +5,8 @@
     ],
     "AllowedMethods": [
       "GET",
-      "HEAD"
+      "HEAD",
+      "PUT"
     ],
     "AllowedOrigins": [
       "https://*.pages.dev",

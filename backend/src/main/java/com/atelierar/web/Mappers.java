@@ -14,7 +14,8 @@ public final class Mappers {
                 r.getCurrency(), r.getAccent(), r.getCoverUrl(), r.isPublished(),
                 r.getInstagram(), r.getWhatsapp(), r.getPhone(), r.getTiktok(), r.getFacebook(),
                 r.getWebsite(), r.getGoogleMapsUrl(), r.getWifiName(), r.getWifiPassword(), r.getTheme(),
-                r.isWhatsappOrderEnabled(), r.getWhatsappMessageTemplate());
+                r.isWhatsappOrderEnabled(), r.getWhatsappMessageTemplate(),
+                r.getCategoriesList());
     }
 
     public static PublicRestaurantDto publicRestaurant(Restaurant r) {
@@ -24,7 +25,8 @@ public final class Mappers {
                 r.getAccent(), r.getCoverUrl(),
                 r.getInstagram(), r.getWhatsapp(), r.getPhone(), r.getTiktok(), r.getFacebook(),
                 r.getWebsite(), r.getGoogleMapsUrl(), r.getWifiName(), wifiPass, r.getTheme(),
-                r.isWhatsappOrderEnabled(), r.getWhatsappMessageTemplate());
+                r.isWhatsappOrderEnabled(), r.getWhatsappMessageTemplate(),
+                r.getCategoriesList());
     }
 
     public static ItemDto item(MenuItem i) {

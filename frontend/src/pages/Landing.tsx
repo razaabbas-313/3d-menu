@@ -4,10 +4,12 @@ import {
   Box,
   Calculator,
   Check,
+  CheckCircle2,
   ChevronRight,
   MessageCircle,
   QrCode,
   ScanLine,
+  Send,
   Smartphone,
   Sparkles,
   Upload,
@@ -18,6 +20,7 @@ import { useAuth } from '../lib/auth';
 import { ButtonLink, Logo } from '../components/ui';
 import { Link } from '../lib/router';
 import { ModelViewer } from '../components/ModelViewer';
+import { api } from '../lib/api';
 
 const PLANS = [
   {
@@ -79,6 +82,42 @@ export function Landing() {
   const [dailyTables, setDailyTables] = useState(75);
   const [avgCheck, setAvgCheck] = useState(48);
 
+  // Lead Form State
+  const [leadName, setLeadName] = useState('');
+  const [leadRest, setLeadRest] = useState('');
+  const [leadEmail, setLeadEmail] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [leadCity, setLeadCity] = useState('');
+  const [leadTables, setLeadTables] = useState<number | undefined>(undefined);
+  const [leadNotes, setLeadNotes] = useState('');
+  const [leadBusy, setLeadBusy] = useState(false);
+  const [leadSuccess, setLeadSuccess] = useState(false);
+  const [leadError, setLeadError] = useState<string | null>(null);
+
+  const handleLeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLeadBusy(true);
+    setLeadError(null);
+    try {
+      await api.submitLead({
+        name: leadName.trim(),
+        restaurantName: leadRest.trim(),
+        phone: leadPhone.trim(),
+        email: leadEmail.trim() || undefined,
+        notes: [
+          leadCity.trim() ? `City: ${leadCity.trim()}` : null,
+          leadTables ? `Tables: ${leadTables}` : null,
+          leadNotes.trim() ? leadNotes.trim() : null
+        ].filter(Boolean).join(' | ') || undefined,
+      });
+      setLeadSuccess(true);
+    } catch (err: any) {
+      setLeadError(err?.message || 'Failed to submit inquiry. Please try again or email us directly at team@atelier-ar.com.');
+    } finally {
+      setLeadBusy(false);
+    }
+  };
+
   // Estimating a conservative 18% check increase from 3D visual upselling & dessert attachment
   const monthlyRevenue = dailyTables * avgCheck * 30;
   const estimatedUpsell = Math.round(monthlyRevenue * 0.18);
@@ -98,6 +137,7 @@ export function Landing() {
           <a href="#how">How It Works</a>
           <a href="#features">Features</a>
           <a href="#pricing">Pricing</a>
+          <a href="#consultation">VIP Demo</a>
           <a href="#faq">FAQ</a>
         </nav>
         <div className="l-nav-cta">
@@ -348,11 +388,174 @@ export function Landing() {
                   </li>
                 ))}
               </ul>
-              <ButtonLink to="/register" variant={p.featured ? 'primary' : 'secondary'} className="wide">
-                {p.cta}
-              </ButtonLink>
+              {p.cta === 'Speak with our team' ? (
+                <a href="#consultation" className="btn btn-secondary wide">
+                  {p.cta}
+                </a>
+              ) : (
+                <ButtonLink to="/register" variant={p.featured ? 'primary' : 'secondary'} className="wide">
+                  {p.cta}
+                </ButtonLink>
+              )}
             </article>
           ))}
+        </div>
+      </section>
+
+      {/* Hospitality Group VIP Consultation & Custom Setup */}
+      <section id="consultation" className="l-lead-section">
+        <div className="l-lead-card">
+          <div className="l-lead-header">
+            <div className="l-hero-badge" style={{ width: 'fit-content' }}>
+              <Sparkles size={14} />
+              <span>VIP Hospitality Program</span>
+            </div>
+            <h2>Request a Private Consultation & Multi-Branch Demo</h2>
+            <p>
+              Looking to digitize a multi-location restaurant group, franchise, or fine-dining establishment?
+              Our culinary 3D team provides bespoke on-site photogrammetry scanning, menu synchronization, and white-label custom domain setup.
+            </p>
+          </div>
+
+          {leadSuccess ? (
+            <div className="l-lead-success">
+              <CheckCircle2 size={36} />
+              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>Inquiry Received!</h3>
+              <p style={{ margin: 0, fontSize: '14.5px', color: '#cbd5e1' }}>
+                Thank you, <strong>{leadName}</strong>. Our hospitality specialist will review your request for <strong>{leadRest || 'your establishment'}</strong> and contact you within 24 business hours via WhatsApp or email.
+              </p>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ marginTop: '8px' }}
+                onClick={() => {
+                  setLeadSuccess(false);
+                  setLeadName('');
+                  setLeadRest('');
+                  setLeadEmail('');
+                  setLeadPhone('');
+                  setLeadCity('');
+                  setLeadTables(undefined);
+                  setLeadNotes('');
+                }}
+              >
+                Submit another inquiry
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleLeadSubmit} className="l-lead-form">
+              {leadError && (
+                <div className="l-lead-error" role="alert">
+                  {leadError}
+                </div>
+              )}
+
+              <div className="l-lead-grid">
+                <div className="l-lead-field">
+                  <label htmlFor="lead-name">Your Full Name *</label>
+                  <input
+                    id="lead-name"
+                    type="text"
+                    required
+                    placeholder="e.g. Chef Marco Pierre"
+                    value={leadName}
+                    onChange={(e) => setLeadName(e.target.value)}
+                  />
+                </div>
+
+                <div className="l-lead-field">
+                  <label htmlFor="lead-rest">Restaurant / Group Name *</label>
+                  <input
+                    id="lead-rest"
+                    type="text"
+                    required
+                    placeholder="e.g. L'Atelier Gourmet Bistro"
+                    value={leadRest}
+                    onChange={(e) => setLeadRest(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="l-lead-grid">
+                <div className="l-lead-field">
+                  <label htmlFor="lead-email">Business Email *</label>
+                  <input
+                    id="lead-email"
+                    type="email"
+                    required
+                    placeholder="marco@latelier.com"
+                    value={leadEmail}
+                    onChange={(e) => setLeadEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="l-lead-field">
+                  <label htmlFor="lead-phone">WhatsApp / Phone Number *</label>
+                  <input
+                    id="lead-phone"
+                    type="text"
+                    required
+                    placeholder="+1 (555) 234-5678"
+                    value={leadPhone}
+                    onChange={(e) => setLeadPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="l-lead-grid">
+                <div className="l-lead-field">
+                  <label htmlFor="lead-city">City / Location</label>
+                  <input
+                    id="lead-city"
+                    type="text"
+                    placeholder="e.g. Dubai, London, New York"
+                    value={leadCity}
+                    onChange={(e) => setLeadCity(e.target.value)}
+                  />
+                </div>
+
+                <div className="l-lead-field">
+                  <label htmlFor="lead-tables">Total Dining Tables across branches</label>
+                  <input
+                    id="lead-tables"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 120"
+                    value={leadTables ?? ''}
+                    onChange={(e) => setLeadTables(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </div>
+              </div>
+
+              <div className="l-lead-field">
+                <label htmlFor="lead-notes">Special Requirements / Message</label>
+                <textarea
+                  id="lead-notes"
+                  rows={3}
+                  placeholder="Tell us about your menu, number of branches, or custom photogrammetry needs..."
+                  value={leadNotes}
+                  onChange={(e) => setLeadNotes(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                <button
+                  type="submit"
+                  disabled={leadBusy}
+                  className="btn btn-primary"
+                  style={{ minWidth: '220px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {leadBusy ? (
+                    'Submitting inquiry...'
+                  ) : (
+                    <>
+                      Request VIP Consultation <Send size={15} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </section>
 

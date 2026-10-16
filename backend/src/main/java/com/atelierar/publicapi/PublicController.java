@@ -16,6 +16,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +27,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/public")
 public class PublicController {
+    private static final Logger log = LoggerFactory.getLogger(PublicController.class);
+
     private final RestaurantRepository restaurants;
     private final MenuItemRepository items;
     private final MenuEventRepository events;
@@ -95,7 +100,10 @@ public class PublicController {
                 req.notes() != null ? req.notes().trim() : null,
                 http.getRemoteAddr()
         );
-        return Mappers.lead(leads.save(lead));
+        LeadInquiry saved = leads.save(lead);
+        log.warn("★ NEW B2B SALES LEAD: '{}' from '{}', Phone: {}, Email: {}",
+                saved.getName(), saved.getRestaurantName(), saved.getPhone(), saved.getEmail());
+        return Mappers.lead(saved);
     }
 
     private Restaurant published(String slug) {

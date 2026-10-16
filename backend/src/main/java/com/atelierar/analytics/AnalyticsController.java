@@ -44,37 +44,49 @@ public class AnalyticsController {
         Instant start = today.minusDays(days - 1L).atStartOfDay(zone).toInstant();
         Instant previousStart = start.minus(days, ChronoUnit.DAYS);
 
-        int types = EventType.values().length;
-        long[] current = new long[types];
-        long[] previous = new long[types];
+        // 1. Current window totals aggregated in SQL
+        long[] current = new long[EventType.values().length];
+        for (MenuEventRepository.TypeCount tc : events.countByTypeSince(r.getId(), start)) {
+            if (tc.getType() != null) {
+                current[tc.getType().ordinal()] = tc.getCount();
+            }
+        }
+
+        // 2. Previous window totals aggregated in SQL
+        long[] previous = new long[EventType.values().length];
+        for (MenuEventRepository.TypeCount tc : events.countByTypeBetween(r.getId(), previousStart, start)) {
+            if (tc.getType() != null) {
+                previous[tc.getType().ordinal()] = tc.getCount();
+            }
+        }
+
+        // 3. Day points for charts (lightweight projections, zero full Hibernate entity instantiation)
         Map<LocalDate, long[]> perDay = new TreeMap<>();
         for (int i = days - 1; i >= 0; i--) perDay.put(today.minusDays(i), new long[3]); // scans, views, ar
-        Map<UUID, long[]> perItem = new HashMap<>(); // views, ar
 
-        for (MenuEvent e : events.findByRestaurantIdAndCreatedAtGreaterThanEqual(r.getId(), previousStart)) {
-            boolean inCurrent = !e.getCreatedAt().isBefore(start);
-            if (!inCurrent) {
-                previous[e.getType().ordinal()]++;
-                continue;
-            }
-            current[e.getType().ordinal()]++;
-            long[] bucket = perDay.get(e.getCreatedAt().atZone(zone).toLocalDate());
+        for (MenuEventRepository.EventDayPoint pt : events.findDailyMetricsSince(
+                r.getId(), start, EventType.SCAN, EventType.ITEM_VIEW, EventType.AR_LAUNCH)) {
+            long[] bucket = perDay.get(pt.getCreatedAt().atZone(zone).toLocalDate());
             if (bucket != null) {
-                switch (e.getType()) {
+                switch (pt.getType()) {
                     case SCAN -> bucket[0]++;
                     case ITEM_VIEW -> bucket[1]++;
                     case AR_LAUNCH -> bucket[2]++;
-                    default -> {
-                    }
+                    default -> {}
                 }
-            }
-            if (e.getItemId() != null && (e.getType() == EventType.ITEM_VIEW || e.getType() == EventType.AR_LAUNCH)) {
-                perItem.computeIfAbsent(e.getItemId(), k -> new long[2])[e.getType() == EventType.ITEM_VIEW ? 0 : 1]++;
             }
         }
 
         List<DayPoint> series = new ArrayList<>();
         perDay.forEach((date, v) -> series.add(new DayPoint(date.toString(), v[0], v[1], v[2])));
+
+        // 4. Top items aggregated in SQL
+        Map<UUID, long[]> perItem = new HashMap<>(); // views, ar
+        for (MenuEventRepository.ItemCount ic : events.countByItemSince(r.getId(), start, EventType.ITEM_VIEW, EventType.AR_LAUNCH)) {
+            if (ic.getItemId() != null) {
+                perItem.computeIfAbsent(ic.getItemId(), k -> new long[2])[ic.getType() == EventType.ITEM_VIEW ? 0 : 1] = ic.getCount();
+            }
+        }
 
         Map<UUID, MenuItem> byId = new HashMap<>();
         for (MenuItem item : items.findByRestaurantIdOrderByCreatedAtDesc(r.getId())) byId.put(item.getId(), item);

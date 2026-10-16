@@ -76,6 +76,9 @@ public class Restaurant {
     @Column(length = 500)
     private String whatsappMessageTemplate = "Hello, I would like to order {dish} for Table {table}.";
 
+    @Column(length = 2000)
+    private String categories;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -113,6 +116,27 @@ public class Restaurant {
     public String getWhatsappMessageTemplate() {
         return whatsappMessageTemplate == null ? "Hello, I would like to order {dish} for Table {table}." : whatsappMessageTemplate;
     }
+    public String getCategories() { return categories; }
+
+    public java.util.List<String> getCategoriesList() {
+        if (categories == null || categories.isBlank()) {
+            return java.util.List.of();
+        }
+        return java.util.Arrays.stream(categories.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+
+    public void setCategories(String categories) { this.categories = categories; }
+
+    public void setCategoriesList(java.util.List<String> list) {
+        if (list == null || list.isEmpty()) {
+            this.categories = null;
+        } else {
+            this.categories = String.join(",", list);
+        }
+    }
 
     public void setSlug(String slug) { this.slug = slug; }
     public void setPublished(boolean published) { this.published = published; }
@@ -124,6 +148,15 @@ public class Restaurant {
                               String instagram, String whatsapp, String phone, String tiktok, String facebook,
                               String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme,
                               Boolean whatsappOrderEnabled, String whatsappMessageTemplate) {
+        updateProfile(name, slug, tagline, city, currency, accent, instagram, whatsapp, phone, tiktok, facebook,
+                website, googleMapsUrl, wifiName, wifiPassword, theme, whatsappOrderEnabled, whatsappMessageTemplate, null);
+    }
+
+    public void updateProfile(String name, String slug, String tagline, String city, String currency, String accent,
+                              String instagram, String whatsapp, String phone, String tiktok, String facebook,
+                              String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme,
+                              Boolean whatsappOrderEnabled, String whatsappMessageTemplate,
+                              java.util.List<String> categories) {
         this.name = name;
         if (slug != null && !slug.isBlank()) this.slug = slug;
         this.tagline = tagline;
@@ -142,5 +175,8 @@ public class Restaurant {
         if (theme != null) this.theme = theme;
         if (whatsappOrderEnabled != null) this.whatsappOrderEnabled = whatsappOrderEnabled;
         if (whatsappMessageTemplate != null && !whatsappMessageTemplate.isBlank()) this.whatsappMessageTemplate = whatsappMessageTemplate;
+        if (categories != null) {
+            setCategoriesList(categories);
+        }
     }
 }

@@ -540,6 +540,115 @@
   margin: 0;
 }
 
+/* ---------- Hospitality Lead Inquiry Form ---------- */
+.l-lead-section {
+  width: min(1000px, 100%);
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+}
+
+.l-lead-card {
+  background: var(--tile);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 44px;
+  display: grid;
+  gap: 28px;
+  box-shadow: var(--shadow-rim);
+}
+
+.l-lead-header {
+  display: grid;
+  gap: 12px;
+}
+
+.l-lead-header h2 {
+  font-size: clamp(26px, 3.8vw, 38px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: #fff;
+  margin: 0;
+}
+
+.l-lead-header p {
+  color: var(--slate);
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.l-lead-form {
+  display: grid;
+  gap: 20px;
+}
+
+.l-lead-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 640px) {
+  .l-lead-card {
+    padding: 24px 18px;
+  }
+  .l-lead-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+.l-lead-field {
+  display: grid;
+  gap: 6px;
+}
+
+.l-lead-field label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.l-lead-field input,
+.l-lead-field textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--r-md);
+  background: #111726;
+  border: 1px solid var(--line);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.l-lead-field input:focus,
+.l-lead-field textarea:focus {
+  border-color: var(--saffron);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.l-lead-success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: var(--r-lg);
+  padding: 28px;
+  text-align: center;
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  color: #6ee7b7;
+}
+
+.l-lead-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  color: #fca5a5;
+  font-size: 14px;
+}
+
 /* ---------- Bottom CTA ---------- */
 .l-cta {
   background: radial-gradient(circle at 50% 30%, #1e3a8a 0%, #0a0e17 90%), var(--tile);

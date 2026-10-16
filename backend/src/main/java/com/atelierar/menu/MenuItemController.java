@@ -148,20 +148,22 @@ public class MenuItemController {
         item.setModelFileName(displayName(file.getOriginalFilename()));
         items.save(item);
 
+        String originalUrl = null;
+        String optimizedUrl = null;
         try {
             byte[] originalBytes = file.getBytes();
             long origSize = originalBytes.length;
 
             // 1. Store original model privately in S3
             String oldOriginal = item.getOriginalModelUrl();
-            String originalUrl = storage.saveItemOriginalModel(item.getRestaurantId(), item.getId(), originalBytes, file.getOriginalFilename());
+            originalUrl = storage.saveItemOriginalModel(item.getRestaurantId(), item.getId(), originalBytes, file.getOriginalFilename());
 
             // 2. Optimize production copy using Draco and WebP pipeline (bypassed safely on 512MB RAM free instances)
             ModelOptimizationService.OptimizationResult optResult = modelOptimizer.optimize(originalBytes, file.getOriginalFilename());
 
             // 3. Upload optimized model to public S3 / CloudFront location
             String oldModel = item.getModelUrl();
-            String optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), optResult.optimizedBytes());
+            optimizedUrl = storage.saveItemOptimizedModel(item.getRestaurantId(), item.getId(), optResult.optimizedBytes());
 
             // 4. Update database item metadata
             item.setModel(optimizedUrl, displayName(file.getOriginalFilename()));
@@ -183,11 +185,73 @@ public class MenuItemController {
 
             return Mappers.item(saved);
         } catch (Exception e) {
+            // Clean up any orphaned files uploaded during failed transaction
+            if (originalUrl != null) storage.deleteQuietly(originalUrl);
+            if (optimizedUrl != null) storage.deleteQuietly(optimizedUrl);
             // Revert state so dish is never stuck in PROCESSING on failure
             item.setModelStatus("READY");
             items.save(item);
             throw e;
         }
+    }
+
+    /**
+     * Issues a presigned S3 PUT URL so the browser can upload large 3D models (>15MB)
+     * straight to AWS S3 without passing through Render's 512MB container memory.
+     */
+    @PostMapping("/{id}/model-presign")
+    public Map<String, String> presignModelUpload(@PathVariable UUID id, @RequestBody(required = false) Map<String, Object> req) {
+        MenuItem item = owned(id);
+        String fileName = req != null && req.get("fileName") != null ? req.get("fileName").toString() : item.getName() + ".glb";
+        Number fileSizeNum = req != null && req.get("fileSize") instanceof Number n ? n : null;
+        if (fileSizeNum != null && fileSizeNum.longValue() > maxModelBytes) {
+            long maxMb = maxModelBytes / (1024 * 1024);
+            throw StorageValidator.tooLarge("The 3D model is larger than " + maxMb + " MB. Compress it and try again.");
+        }
+
+        String key = "restaurants/" + item.getRestaurantId() + "/items/" + item.getId() + "/" + UUID.randomUUID() + ".glb";
+        String presignedPutUrl = storage.generatePresignedPutUrl(key, "model/gltf-binary", Duration.ofMinutes(15));
+        if (presignedPutUrl == null) {
+            return Map.of("directS3", "false");
+        }
+        return Map.of(
+                "directS3", "true",
+                "uploadUrl", presignedPutUrl,
+                "key", key,
+                "fileName", displayName(fileName)
+        );
+    }
+
+    /**
+     * Confirms that a direct-to-S3 model upload completed successfully, updating database & CDN snapshot.
+     */
+    @PostMapping("/{id}/model-confirm")
+    public ItemDto confirmModelUpload(@PathVariable UUID id, @RequestBody Map<String, Object> req) {
+        MenuItem item = owned(id);
+        String key = req.get("key") != null ? req.get("key").toString() : null;
+        String fileName = req.get("fileName") != null ? req.get("fileName").toString() : item.getName() + ".glb";
+        Number fileSizeNum = req.get("fileSize") instanceof Number n ? n : null;
+        long fileSize = fileSizeNum != null ? fileSizeNum.longValue() : 0L;
+
+        if (key == null || key.isBlank() || !key.startsWith("restaurants/" + item.getRestaurantId() + "/items/" + item.getId() + "/")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or unauthorized model storage key.");
+        }
+
+        String publicUrl = storage.toPublicUrl(key);
+        String oldModel = item.getModelUrl();
+
+        item.setModel(publicUrl, displayName(fileName));
+        item.setModelFileSize(fileSize > 0 ? fileSize : null);
+        item.setModelStatus("READY");
+        item.setModelOptimizationNotes("Direct S3 upload");
+        MenuItem saved = items.save(item);
+
+        if (oldModel != null && !oldModel.equals(publicUrl)) {
+            storage.deleteQuietly(oldModel);
+        }
+
+        snapshots.updateSnapshot(saved.getRestaurantId());
+        return Mappers.item(saved);
     }
 
     @DeleteMapping("/{id}/model")

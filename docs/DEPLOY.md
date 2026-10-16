@@ -43,10 +43,10 @@ Diners (Mobile Phones) ───────► Cloudflare Pages (Static Fronten
 
 ## Step 2: AWS S3 & CloudFront Asset CDN
 
-Follow the step-by-step setup in [`docs/aws/CLOUDFRONT_AND_BUDGETS.md`](file:///d:/downloads/atelier-ar-v2/atelier/docs/aws/CLOUDFRONT_AND_BUDGETS.md):
+Follow the step-by-step setup in [`docs/aws/CLOUDFRONT_AND_BUDGETS.md`](aws/CLOUDFRONT_AND_BUDGETS.md):
 1. **Create S3 Bucket**: e.g., `atelier-menu-assets-prod`.
-2. **Apply CORS Configuration**: Paste [`docs/aws/cors.json`](file:///d:/downloads/atelier-ar-v2/atelier/docs/aws/cors.json) into the S3 CORS tab.
-3. **Create IAM User**: Attach [`docs/aws/iam-policy.json`](file:///d:/downloads/atelier-ar-v2/atelier/docs/aws/iam-policy.json). Generate an Access Key ID and Secret Access Key.
+2. **Apply CORS Configuration**: Paste [`docs/aws/cors.json`](aws/cors.json) into the S3 CORS tab.
+3. **Create IAM User**: Attach [`docs/aws/iam-policy.json`](aws/iam-policy.json). Generate an Access Key ID and Secret Access Key.
 4. **Create CloudFront Distribution**: Connect it to your S3 bucket.
 5. **Set up AWS Zero-Spend Budget**: Set an alert threshold at `$0.01` so you are emailed if anything incurs charges.
 
@@ -101,7 +101,7 @@ Follow the step-by-step setup in [`docs/aws/CLOUDFRONT_AND_BUDGETS.md`](file:///
    * `VITE_API_BASE_URL`: `https://atelier-ar-api.onrender.com` (your backend URL)
    * `VITE_ASSET_BASE_URL`: `https://d3v0d0550ieqxu.cloudfront.net` (your CloudFront URL)
 6. Click **Save and Deploy**.
-7. Cloudflare Pages automatically detects [`frontend/public/_redirects`](file:///d:/downloads/atelier-ar-v2/atelier/frontend/public/_redirects) for SPA routing and [`frontend/public/_headers`](file:///d:/downloads/atelier-ar-v2/atelier/frontend/public/_headers) for 3D model CORS headers.
+7. Cloudflare Pages automatically detects [`frontend/public/_redirects`](../frontend/public/_redirects) for SPA routing and [`frontend/public/_headers`](../frontend/public/_headers) for 3D model CORS headers.
 
 ---
 

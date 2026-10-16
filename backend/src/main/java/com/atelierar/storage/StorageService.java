@@ -32,6 +32,8 @@ public interface StorageService {
 
     Optional<String> getPublicSnapshot(String slug);
 
+    void deletePublicSnapshot(String slug);
+
     void deleteQuietly(String url);
 
     default String saveModel(MultipartFile file) throws IOException {
@@ -49,4 +51,8 @@ public interface StorageService {
     long getRestaurantStorageUsage(UUID restaurantId);
 
     String generatePresignedGetUrl(String urlOrKey, Duration duration);
+
+    String generatePresignedPutUrl(String key, String contentType, Duration duration);
+
+    String toPublicUrl(String key);
 }

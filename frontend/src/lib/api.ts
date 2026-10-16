@@ -24,6 +24,7 @@ export type Restaurant = {
   theme: string | null;
   whatsappOrderEnabled?: boolean;
   whatsappMessageTemplate?: string | null;
+  categories?: string[] | null;
 };
 
 export type Item = {
@@ -307,7 +308,7 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 import { mockStore } from './mockStore';
 
-const isMock = () => !token || token === 'mock-token-session';
+const isMock = () => !import.meta.env.PROD && token === 'mock-token-session';
 
 export const api = {
   // auth
@@ -370,12 +371,31 @@ export const api = {
     theme?: string;
     whatsappOrderEnabled?: boolean;
     whatsappMessageTemplate?: string;
+    categories?: string[];
   }) => {
     try {
       return await request<Restaurant>('/restaurant', json('PUT', b));
     } catch (err) {
       if (!isMock()) throw err;
       return mockStore.updateRestaurant(b);
+    }
+  },
+  restaurant: async () => {
+    try {
+      return await request<Restaurant>('/restaurant');
+    } catch (err) {
+      if (!isMock()) throw err;
+      return mockStore.getRestaurant();
+    }
+  },
+  updateCategories: async (categories: string[]) => {
+    try {
+      return await request<Restaurant>('/restaurant/categories', json('PATCH', categories));
+    } catch (err) {
+      if (!isMock()) throw err;
+      const r = mockStore.getRestaurant();
+      r.categories = categories;
+      return r;
     }
   },
   publish: async (value: boolean) => {
@@ -454,7 +474,45 @@ export const api = {
       return mockStore.uploadItemImage(id, file);
     }
   },
-  uploadModel: async (id: string, file: File, onProgress?: (f: number) => void) => {
+  uploadModel: async (id: string, file: File, onProgress?: (f: number) => void): Promise<Item> => {
+    // 1. Try direct presigned S3 PUT (0 bytes through Render's 512MB RAM)
+    try {
+      const presign = await request<{ directS3: string; uploadUrl?: string; key?: string; fileName?: string }>(
+        `/items/${id}/model-presign`,
+        json('POST', { fileName: file.name, fileSize: file.size })
+      );
+
+      if (presign && presign.directS3 === 'true' && presign.uploadUrl && presign.key) {
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', presign.uploadUrl!);
+          xhr.setRequestHeader('Content-Type', 'model/gltf-binary');
+          xhr.timeout = 180000;
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) onProgress?.(e.loaded / e.total);
+          };
+          xhr.ontimeout = () => reject(new ApiError(408, 'Upload to S3 timed out.'));
+          xhr.onerror = () => reject(new ApiError(0, 'Failed to upload directly to S3. Check network connection.'));
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new ApiError(xhr.status, `S3 upload failed (${xhr.status}).`));
+            }
+          };
+          xhr.send(file);
+        });
+
+        return await request<Item>(
+          `/items/${id}/model-confirm`,
+          json('POST', { key: presign.key, fileName: file.name, fileSize: file.size })
+        );
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 413) throw err;
+      // Fall through to standard upload if direct S3 is not available
+    }
+
     try {
       return await upload<Item>(`/items/${id}/model`, file, onProgress);
     } catch (err) {
@@ -495,7 +553,8 @@ export const api = {
   analytics: async (days: number) => {
     try {
       return await request<Analytics>(`/analytics/summary?days=${days}&tz=${-new Date().getTimezoneOffset()}`);
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.getAnalytics(days);
     }
   },
@@ -543,8 +602,11 @@ export const api = {
         const cached = localStorage.getItem(`atelier.snapshot.${slug}`);
         if (cached) return JSON.parse(cached) as PublicMenu;
       } catch {}
-      // 4. Fall back to mock store
-      return mockStore.getPublicMenu(slug);
+      // 4. In development only, fall back to mock store for 'demo'
+      if (!import.meta.env.PROD && slug === 'demo') {
+        return mockStore.getPublicMenu(slug);
+      }
+      throw e;
     }
   },
 
@@ -583,17 +645,18 @@ export const api = {
   },
 
   submitLead: async (data: LeadInquiryInput) => {
-    try {
-      return await request<void>('/public/leads', json('POST', data), { publicCall: true });
-    } catch {
-      return undefined;
-    }
+    return await request<{ id: string }>('/public/leads', json('POST', data), { publicCall: true });
+  },
+
+  leads: async () => {
+    return await request<Array<LeadInquiryInput & { id: string; createdAt: string }>>('/leads');
   },
 
   toggleAvailable: async (id: string, value: boolean) => {
     try {
       return await request<Item>(`/items/${id}/available?value=${value}`, { method: 'PATCH' });
-    } catch {
+    } catch (err) {
+      if (!isMock()) throw err;
       return mockStore.toggleAvailable(id, value);
     }
   }

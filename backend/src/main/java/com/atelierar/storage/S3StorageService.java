@@ -13,6 +13,8 @@ import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +22,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AWS S3 storage implementation. Uses AWS SDK for Java v2 with UrlConnectionHttpClient
@@ -218,6 +221,18 @@ public class S3StorageService implements StorageService {
     }
 
     @Override
+    public void deletePublicSnapshot(String slug) {
+        if (slug == null || slug.isBlank() || bucket.isEmpty()) return;
+        String key = "public/" + slug + "/menu.json";
+        try {
+            s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+            log.info("Deleted public S3 snapshot: {}", key);
+        } catch (Exception e) {
+            log.warn("Could not delete S3 public snapshot {}: {}", key, e.getMessage());
+        }
+    }
+
+    @Override
     public void deleteQuietly(String url) {
         if (url == null || url.isBlank()) return;
         String key = extractKey(url);
@@ -240,9 +255,18 @@ public class S3StorageService implements StorageService {
         return false;
     }
 
+    private final ConcurrentHashMap<UUID, CachedUsage> usageCache = new ConcurrentHashMap<>();
+    private record CachedUsage(long bytes, long timestamp) {}
+
     @Override
     public long getRestaurantStorageUsage(UUID restaurantId) {
         if (restaurantId == null || bucket.isEmpty()) return 0;
+        CachedUsage cached = usageCache.get(restaurantId);
+        long now = System.currentTimeMillis();
+        if (cached != null && (now - cached.timestamp()) < 60_000) {
+            return cached.bytes();
+        }
+
         String prefix = "restaurants/" + restaurantId + "/";
         long totalBytes = 0;
         try {
@@ -258,6 +282,7 @@ public class S3StorageService implements StorageService {
                 }
                 req = req.toBuilder().continuationToken(res.nextContinuationToken()).build();
             } while (res.isTruncated());
+            usageCache.put(restaurantId, new CachedUsage(totalBytes, now));
         } catch (Exception e) {
             log.warn("Error calculating storage usage for restaurant {}: {}", restaurantId, e.getMessage());
         }
@@ -290,6 +315,31 @@ public class S3StorageService implements StorageService {
         }
     }
 
+    @Override
+    public String generatePresignedPutUrl(String key, String contentType, Duration duration) {
+        if (key == null || key.isBlank() || bucket.isEmpty() || presigner == null) {
+            return null;
+        }
+        if (key.startsWith("/")) key = key.substring(1);
+
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(contentType != null ? contentType : "application/octet-stream")
+                    .build();
+            PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                    .signatureDuration(duration != null ? duration : Duration.ofMinutes(15))
+                    .putObjectRequest(putObjectRequest)
+                    .build();
+            PresignedPutObjectRequest presigned = presigner.presignPutObject(presignRequest);
+            return presigned.url().toString();
+        } catch (Exception e) {
+            log.warn("Failed to generate presigned PUT URL for key '{}': {}", key, e.getMessage());
+            return null;
+        }
+    }
+
     private void checkQuota(UUID restaurantId, long newBytes) {
         if (restaurantId == null) return;
         long current = getRestaurantStorageUsage(restaurantId);
@@ -312,7 +362,8 @@ public class S3StorageService implements StorageService {
         s3.putObject(req, RequestBody.fromBytes(content));
     }
 
-    private String toPublicUrl(String key) {
+    @Override
+    public String toPublicUrl(String key) {
         if (!publicBaseUrl.isEmpty()) {
             return publicBaseUrl + "/" + key;
         }

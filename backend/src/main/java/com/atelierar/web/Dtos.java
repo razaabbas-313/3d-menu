@@ -38,7 +38,8 @@ public final class Dtos {
                                 String accent, String coverUrl, boolean published,
                                 String instagram, String whatsapp, String phone, String tiktok, String facebook,
                                 String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme,
-                                boolean whatsappOrderEnabled, String whatsappMessageTemplate) {
+                                boolean whatsappOrderEnabled, String whatsappMessageTemplate,
+                                List<String> categories) {
     }
 
     public record RestaurantUpdate(
@@ -59,7 +60,8 @@ public final class Dtos {
             @Size(max = 100) String wifiPassword,
             @Size(max = 30) String theme,
             Boolean whatsappOrderEnabled,
-            @Size(max = 500) String whatsappMessageTemplate) {
+            @Size(max = 500) String whatsappMessageTemplate,
+            List<String> categories) {
     }
 
     // ---- menu items ----
@@ -95,7 +97,8 @@ public final class Dtos {
                                       String accent, String coverUrl,
                                       String instagram, String whatsapp, String phone, String tiktok, String facebook,
                                       String website, String googleMapsUrl, String wifiName, String wifiPassword, String theme,
-                                      boolean whatsappOrderEnabled, String whatsappMessageTemplate) {
+                                      boolean whatsappOrderEnabled, String whatsappMessageTemplate,
+                                      List<String> categories) {
     }
 
     public record PublicItemDto(String id, String name, String category, String description, BigDecimal price,

@@ -45,6 +45,7 @@ public class RestaurantController {
     @PutMapping
     public RestaurantDto update(@Valid @RequestBody RestaurantUpdate req) {
         Restaurant r = service.current();
+        String oldSlug = r.getSlug();
         String slugReq = req.slug() != null && !req.slug().isBlank() ? req.slug().trim() : null;
         if (slugReq != null) {
             String candidate = RestaurantService.normalizeSlug(slugReq);
@@ -73,9 +74,13 @@ public class RestaurantController {
                 blankToNull(req.wifiPassword()),
                 req.theme() != null ? req.theme() : "dark",
                 req.whatsappOrderEnabled() != null ? req.whatsappOrderEnabled() : true,
-                blankToNull(req.whatsappMessageTemplate())
+                blankToNull(req.whatsappMessageTemplate()),
+                req.categories()
         );
         Restaurant saved = restaurants.save(r);
+        if (oldSlug != null && !oldSlug.equalsIgnoreCase(saved.getSlug())) {
+            snapshots.deleteSnapshot(oldSlug);
+        }
         snapshots.updateSnapshot(saved.getId());
         return Mappers.restaurant(saved);
     }
@@ -87,6 +92,15 @@ public class RestaurantController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Add at least one dish before publishing your menu.");
         }
         r.setPublished(value);
+        Restaurant saved = restaurants.save(r);
+        snapshots.updateSnapshot(saved.getId());
+        return Mappers.restaurant(saved);
+    }
+
+    @PatchMapping("/categories")
+    public RestaurantDto updateCategories(@RequestBody List<String> categories) {
+        Restaurant r = service.current();
+        r.setCategoriesList(categories);
         Restaurant saved = restaurants.save(r);
         snapshots.updateSnapshot(saved.getId());
         return Mappers.restaurant(saved);

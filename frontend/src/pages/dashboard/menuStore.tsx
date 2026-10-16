@@ -52,10 +52,17 @@ export function MenuProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     setStatus('loading');
-    api.items()
-      .then((list) => {
+    Promise.all([
+      api.items(),
+      api.restaurant().catch(() => null)
+    ])
+      .then(([list, rest]) => {
         if (cancelled) return;
         setItems(list);
+        if (rest?.categories && Array.isArray(rest.categories) && rest.categories.length > 0) {
+          setCustomCats(rest.categories);
+          saveStoredCategories(rest.categories);
+        }
         setStatus('ready');
       })
       .catch((e: unknown) => {
@@ -84,6 +91,7 @@ export function MenuProvider({ children }: { children: ReactNode }) {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
       const next = [...prev, trimmed];
       saveStoredCategories(next);
+      api.updateCategories(next).catch(() => {});
       return next;
     });
     return true;
@@ -113,10 +121,11 @@ export function MenuProvider({ children }: { children: ReactNode }) {
         // continue
       }
     }
-    // 2. Remove from active category list
+    // 2. Remove from active category list and persist to backend
     setCustomCats((prev) => {
       const next = prev.filter((c) => c.toLowerCase() !== targetLower);
       saveStoredCategories(next);
+      api.updateCategories(next).catch(() => {});
       return next;
     });
   }, [items, upsert]);

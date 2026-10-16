@@ -25,7 +25,8 @@ const INITIAL_RESTAURANT: Restaurant = {
   wifiPassword: 'gourmetdining',
   theme: 'dark',
   whatsappOrderEnabled: true,
-  whatsappMessageTemplate: 'Hello, I would like to order {dish} for Table {table}.'
+  whatsappMessageTemplate: 'Hello, I would like to order {dish} for Table {table}.',
+  categories: ['Signatures', 'Starters', 'Mains', 'Desserts', 'Beverages']
 };
 
 const INITIAL_ITEMS: Item[] = [

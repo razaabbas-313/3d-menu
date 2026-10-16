@@ -1,75 +1,114 @@
 # Atelier AR
 
-3D and augmented-reality menus for restaurants. Owners upload dishes and `.glb` models, print one QR code, and guests
-scan it to rotate each dish on their phone and place it on their table in AR. No app to install.
+**Turn restaurant menus into an interactive 3D and Augmented Reality dining spectacle.**
+
+Atelier AR empowers restaurant owners to upload photorealistic 3D dishes (`.glb`), print luxury QR table stands, and allow guests to place dishes directly onto their dining tables in Augmented Reality—without downloading any apps.
 
 ```
 atelier/
-  backend/    Spring Boot 3.4 (Java 21) REST API: auth, menu, uploads, analytics
-  frontend/   React 18 + Vite + TypeScript: landing page, owner dashboard, guest menu
-  samples/    A CC0 demo model (avocado.glb) for trying the 3D studio
+  backend/    Spring Boot 3.4 (Java 21) REST API: Auth, S3 Presigned PUT, Analytics, Flyway Migrations
+  frontend/   React 18 + Vite + TypeScript: Landing page, VIP Consultation, Owner Studio, Guest Menu
+  samples/    CC0 photorealistic 3D food model (avocado.glb) for live testing
+  docs/       Architecture, AWS CloudFront + S3 + Budget guides, Deployment guides
   docker-compose.yml
 ```
 
-## Run it locally
+---
 
-You need Java 21 and Node 20+. **No database install is required**: the API uses an embedded H2 file database by default.
+## Key Capabilities & Production Architecture
+
+1. **Direct S3 Presigned PUT Uploads**:
+   3D model files (up to 15 MB) are uploaded directly from the browser to Amazon S3 via cryptographically signed presigned PUT URLs (`/api/v1/items/{id}/model-presign`), completely bypassing Render's 512MB RAM and eliminating container out-of-memory crashes.
+
+2. **Global CloudFront CDN & Cold-Start Immunity**:
+   When a menu is published, the backend writes a static snapshot `public/{slug}/menu.json` directly to Amazon S3 and CloudFront CDN. Diners scanning QR table stands load menu data from CloudFront Edge within 100ms, completely immune to Render free-tier container sleep. When unpublishing or renaming a slug, the snapshot is automatically deleted from S3 and purged from CloudFront.
+
+3. **Multi-Language Culinary Presentation**:
+   Every dish supports bilingual translations with full support for **Urdu (اردو)** and **Arabic (العربية)**, complete with proper RTL font rendering, dietary tags, and localized descriptions.
+
+4. **Direct Table WhatsApp Ordering**:
+   Guests can assemble a dining order, enter their table number, and dispatch an order ticket formatted with table details directly to the kitchen or waiter's WhatsApp number.
+
+5. **VIP Hospitality Lead Capture**:
+   A dedicated high-conversion lead generation funnel captures multi-branch restaurant group consultations. Submissions are persisted in PostgreSQL and accessible via authenticated `GET /api/v1/leads`.
+
+6. **Relational Schema Hardening & Daily Retention**:
+   Full referential integrity with foreign key constraints, `ON DELETE CASCADE` rules, and indexes on `menu_events.item_id`. Raw events older than 90 days are automatically purged daily at 3:15 AM UTC to keep database storage well within Neon's 0.5 GB free-tier limit.
+
+7. **Synchronized Custom Categories**:
+   Dish categories are stored in PostgreSQL on the `restaurants` entity and updated via `PATCH /api/v1/restaurant/categories`, keeping categories synchronized across all devices, browsers, and published menus.
+
+---
+
+## Run Locally
+
+### Prerequisites
+- **Java 21+**
+- **Node.js 20+**
+- **No external database required for development**: Uses an embedded H2 file database (`MODE=PostgreSQL`) by default.
 
 ```bash
-# terminal 1: API on http://localhost:8080
-cd backend && mvn spring-boot:run
+# 1. Start Spring Boot API (port 8080)
+cd backend
+mvn spring-boot:run
 
-# terminal 2: website on http://localhost:5173
-cd frontend && npm install && npm run dev
+# 2. Start Frontend Dev Server (port 5173)
+cd frontend
+npm install
+npm run dev
 ```
 
-Open http://localhost:5173, create an account, click **Use sample dishes**, then upload `samples/avocado.glb` to a dish in
-the **3D studio**.
+Open [http://localhost:5173](http://localhost:5173), create an account, click **Use sample dishes**, and explore the **3D Studio**.
 
-No Java handy? `cd frontend && npm run mock` starts an in-memory stand-in for the API on port 8080 (data resets on restart).
+---
 
-### PostgreSQL
-Set `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` (see `backend/.env.example`). If you already have a database from the first MVP,
-the new columns are added automatically, but the old demo restaurant has no owner. Simplest is to start from an empty database.
+## Production Deployment ($0.00 / Month Architecture)
 
-### Testing AR on a real phone
-AR only works over **https** on a phone, so `localhost` will not do. Expose your dev server with a tunnel
-(for example `cloudflared tunnel --url http://localhost:5173` or `ngrok http 5173`), publish your menu, and scan the QR code
-from the **QR and sharing** page. In the **3D studio** there is also a "Try it on your phone" QR for the selected dish.
-iPhones open Quick Look, Android phones open Scene Viewer or WebXR.
-
-### Production
-`JWT_SECRET=$(openssl rand -hex 32) docker compose up --build` starts PostgreSQL, the API and an nginx site on port 3000.
-Put it behind HTTPS (Caddy, Cloudflare, a load balancer). Back up the `pgdata` and `uploads` volumes.
-
-## What was fixed and added since the first version
-
-| Area | Before | Now |
+| Component | Service | Cost |
 |---|---|---|
-| Security | No login; anyone could edit any restaurant | JWT accounts, BCrypt passwords, every query scoped to the owner, rate-limited sign-in and event endpoints |
-| Uploads | `.gltf` accepted (breaks without its `.bin`), extension trusted, old files orphaned | GLB only, verified by file signature, size-limited, old files deleted on replace, photo upload added |
-| Analytics | Hard-coded "1,284 scans" | Real scan, dish-view and AR-launch events with daily charts and top dishes |
-| Data | `featured` never reached the UI; fake starter dishes when the API was down | Featured, sold-out, hidden and dietary labels; honest loading, empty and error states |
-| Editing | `prompt()` / `confirm()` | Editor drawer, confirm dialogs, search, filters, quick hide |
-| QR | Third-party QR service, fields that did not save | Local QR generation, PNG/SVG download, printable table card, publish toggle |
-| Guest menu | Hard-coded restaurant, same stock photo, `?menu=` links | Branded per restaurant (name, cover, accent), `/m/slug` links, deep links to a dish, search, sold-out states |
-| Errors | Generic handler swallowed exceptions; oversized upload gave a 500 | Consistent `{ "error": "..." }` JSON, logging, proper 400/401/404/409/413/429 |
-| Ops | CORS hard-coded | Environment-driven config, Dockerfiles, compose stack |
+| **Frontend** | Cloudflare Pages / Vercel | $0.00 / month |
+| **Backend API** | Render / Koyeb Web Service (Docker) | $0.00 / month |
+| **Database** | Neon Serverless PostgreSQL | $0.00 / month |
+| **Asset Storage** | Amazon S3 + CloudFront CDN (OAC) | $0.00 / month (AWS Free Tier) |
 
-## API (all JSON, prefix `/api/v1`)
+Detailed step-by-step setup guides:
+- [Deployment Guide](docs/DEPLOY.md)
+- [AWS CloudFront & S3 Zero-Spend Guide](docs/aws/CLOUDFRONT_AND_BUDGETS.md)
 
-| | |
-|---|---|
-| `POST /auth/register`, `POST /auth/login`, `GET /auth/me` | accounts |
-| `GET/PUT /restaurant`, `PATCH /restaurant/publish?value=`, `POST/DELETE /restaurant/cover`, `POST /restaurant/sample-menu` | owner's restaurant |
-| `GET/POST /items`, `PUT/DELETE /items/{id}`, `POST /items/{id}/image`, `POST/DELETE /items/{id}/model` | dishes |
-| `GET /analytics/summary?days=7&tz=300` | guest activity |
-| `GET /public/menu/{slug}`, `POST /public/menu/{slug}/events` | guest menu (no login) |
+---
 
-## Known limitations and sensible next steps
-- **Storage** is local disk. Move uploads to S3/R2 + a CDN before running several servers.
-- **Schema** is managed by Hibernate `ddl-auto=update`. Add Flyway migrations before real customers.
-- **Rate limiting** is in-memory (one instance). Use Redis or an edge limiter when you scale out.
-- **Analytics** aggregates in Java, fine for thousands of events a day; switch to SQL aggregation or pre-computed daily rows later.
-- **Not built yet**: password reset and email verification, multiple branches per owner, billing (the landing-page prices are placeholders in `Landing.tsx`),
-  Urdu/RTL and multi-language menus, drag-to-reorder dishes, automated tests.
+## Automated Testing Suite
+
+The backend includes automated JUnit 5 test suites covering critical security, snapshot privacy, and asset management:
+- **`PublicMenuSnapshotPrivacyTest`**: Verifies that Wi-Fi passwords and unready 3D model URLs are never exposed in public guest snapshots.
+- **`ImageOptimizationServiceTest`**: Tests WebP and thumbnail compression pipelines.
+- **`S3StorageServiceTest` & `StorageServiceTest`**: Tests asset quotas, presigned URLs, and tenant isolation.
+
+Run tests:
+```bash
+cd backend
+mvn test
+```
+
+---
+
+## API Summary (All JSON, Prefix `/api/v1`)
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/auth/register`, `/auth/login`, `/auth/me` | POST / GET | User registration, authentication & session profile |
+| `/restaurant` | GET / PUT | Restaurant branding, currency, accent, socials, and Wi-Fi |
+| `/restaurant/publish?value=` | PATCH | Publish or unpublish menu snapshot on S3/CloudFront |
+| `/restaurant/categories` | PATCH | Update and synchronize persistent dish categories |
+| `/restaurant/cover` | POST / DELETE | Upload or remove dining cover hero photo |
+| `/items` | GET / POST | List dishes or create new dish |
+| `/items/{id}` | PUT / DELETE | Update dish metadata or delete dish |
+| `/items/{id}/model-presign` | POST | Request S3 presigned PUT URL for direct browser upload |
+| `/items/{id}/model-confirm` | POST | Confirm direct S3 upload and activate model |
+| `/items/{id}/model-tuning` | PATCH | Adjust AR scaling and plate/slate placement |
+| `/items/{id}/available?value=` | PATCH | Toggle sold-out / in-stock status |
+| `/analytics/summary?days=7` | GET | Aggregated scan, dish view, and AR launch analytics |
+| `/public/menu/{slug}` | GET | Public guest menu snapshot |
+| `/public/menu/{slug}/events` | POST | Beacon event ingestion (scans, views, AR launches) |
+| `/public/leads` | POST | Submit VIP consultation inquiry from landing page |
+| `/leads` | GET | Authenticated lead list for sales follow-up |
