@@ -55,9 +55,8 @@ export async function compressImage(
       canvas.toBlob(
         (webpBlob) => {
           if (webpBlob && webpBlob.size > 0) {
-            const baseName = file.name.replace(/\.[^/.]+$/, '');
-            const compressedFile = new File([webpBlob], `${baseName}.webp`, {
-              type: 'image/webp',
+            const compressedFile = new File([webpBlob], "dish.webp", {
+              type: "image/webp",
               lastModified: Date.now()
             });
             resolve(compressedFile);
@@ -66,9 +65,8 @@ export async function compressImage(
             canvas.toBlob(
               (jpegBlob) => {
                 if (jpegBlob && jpegBlob.size > 0) {
-                  const baseName = file.name.replace(/\.[^/.]+$/, '');
-                  const compressedFile = new File([jpegBlob], `${baseName}.jpg`, {
-                    type: 'image/jpeg',
+                  const compressedFile = new File([jpegBlob], "dish.jpg", {
+                    type: "image/jpeg",
                     lastModified: Date.now()
                   });
                   resolve(compressedFile);
@@ -94,3 +92,6 @@ export async function compressImage(
     img.src = objectUrl;
   });
 }
+
+/** Alias for compressImage */
+export const compressImageClient = compressImage;

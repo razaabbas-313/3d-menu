@@ -40,12 +40,25 @@ public class ImageOptimizationService {
             return new ImageResult(inputBytes, ext, mime, inputBytes, ext, mime);
         }
 
-        // Fast-path: If client already downsampled and compressed the photo (< 300 KB WebP or JPEG),
-        // bypass heavy Java ImageIO CPU decoding and memory allocation completely for instant uploads
-        if (inputBytes.length <= 300 * 1024 && ("webp".equalsIgnoreCase(ext) || "jpg".equalsIgnoreCase(ext) || "jpeg".equalsIgnoreCase(ext))) {
-            log.debug("Image already pre-compressed by client ({} KB, {}); bypassing server ImageIO pass.",
-                    inputBytes.length / 1024, ext);
-            return new ImageResult(inputBytes, ext, mime, inputBytes, ext, mime);
+        // Strict pre-compressed fast-path:
+        // If client already downsampled and compressed the photo (< 350 KB WebP or JPEG, or any WebP),
+        // completely bypass Java ImageIO.read(...) and CPU-heavy rasterization to prevent free-tier container choking
+        boolean isWebp = "image/webp".equalsIgnoreCase(mime) || "webp".equalsIgnoreCase(ext);
+        boolean isJpeg = "image/jpeg".equalsIgnoreCase(mime) || "jpg".equalsIgnoreCase(ext) || "jpeg".equalsIgnoreCase(ext);
+
+        if ((isWebp || isJpeg) && inputBytes.length < 350 * 1024) {
+            String targetExt = isWebp ? "webp" : "jpg";
+            String targetMime = isWebp ? "image/webp" : "image/jpeg";
+            log.info("Client pre-compressed image received ({} KB, {}); bypassing ImageIO.read pass completely.",
+                    inputBytes.length / 1024, targetMime);
+            return new ImageResult(inputBytes, targetExt, targetMime, inputBytes, targetExt, targetMime);
+        }
+
+        if (isWebp) {
+            // Standard ImageIO does not natively decode WebP without plugins; pass through directly
+            log.info("WebP image received ({} KB); passing through without software rasterization.",
+                    inputBytes.length / 1024);
+            return new ImageResult(inputBytes, "webp", "image/webp", inputBytes, "webp", "image/webp");
         }
 
         try {

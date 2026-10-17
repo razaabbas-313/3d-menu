@@ -56,6 +56,7 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
   const [showTranslations, setShowTranslations] = useState(Boolean(item?.nameUr || item?.nameAr));
   const [modelWarning, setModelWarning] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const [modelFile, setModelFile] = useState<File | null>(null);
   const [removeModel, setRemoveModel] = useState(false);
@@ -66,10 +67,17 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
   const fileInput = useRef<HTMLInputElement>(null);
   const modelInput = useRef<HTMLInputElement>(null);
 
-  const preview = useMemo(() => (file ? URL.createObjectURL(file) : removePhoto ? null : assetUrl(item?.imageUrl) ?? null), [file, removePhoto, item]);
+  const preview = useMemo(() => (
+    file ? URL.createObjectURL(file) :
+    localPreview ? localPreview :
+    removePhoto ? null :
+    assetUrl(item?.imageUrl) ?? null
+  ), [file, localPreview, removePhoto, item]);
+
   useEffect(() => () => {
     if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
-  }, [preview]);
+    if (localPreview?.startsWith('blob:')) URL.revokeObjectURL(localPreview);
+  }, [preview, localPreview]);
 
   const allCategories = useMemo(() => [...new Set([...categories, ...DEFAULT_CATEGORIES])], [categories]);
   const tagOptions = [...new Set([...TAG_PRESETS, ...tags])];
@@ -78,16 +86,29 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
 
   async function pickFile(f: File | undefined) {
     if (!f) return;
-    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return setError('Choose a JPG, PNG or WebP photo.');
-    if (f.size > 15 * 1024 * 1024) return setError('That photo is larger than 15 MB. Choose a smaller one.');
+    if (!/^image\/(jpeg|png|webp)$/i.test(f.type)) return setError('Choose a JPG, PNG or WebP photo.');
+    if (f.size > 25 * 1024 * 1024) return setError('That photo is larger than 25 MB. Choose a smaller one.');
     setError('');
+
+    // Responsive preview immediately
+    const immediateUrl = URL.createObjectURL(f);
+    setLocalPreview(immediateUrl);
+    setRemovePhoto(false);
+
     try {
-      const compressed = await compressImage(f, 1200, 0.82);
-      setFile(compressed);
+      // Scale to max 1200px, WebP quality 0.82
+      const compressedBlob = await compressImage(f, 1200, 0.82);
+      const isJpegFallback = compressedBlob.type === 'image/jpeg';
+      const compressedFile = new File(
+        [compressedBlob],
+        isJpegFallback ? 'dish.jpg' : 'dish.webp',
+        { type: isJpegFallback ? 'image/jpeg' : 'image/webp', lastModified: Date.now() }
+      );
+      setFile(compressedFile);
     } catch {
+      // Fallback to original file on compression failure
       setFile(f);
     }
-    setRemovePhoto(false);
   }
 
   function pickModel(f: File | undefined) {
@@ -212,14 +233,26 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
       <DialogHeader title={item ? 'Edit dish' : 'Add a dish'} subtitle="Manage photo, pricing, and 3D augmented reality model." onClose={onClose} />
       <div className="drawer-body">
         <div className="photo-pick">
-          <div className="photo-frame">
+          <div
+            className="photo-frame"
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const dropped = e.dataTransfer.files?.[0];
+              if (dropped) pickFile(dropped);
+            }}
+            style={{ cursor: 'pointer' }}
+            onClick={() => fileInput.current?.click()}
+            title="Click or drag and drop a photo"
+          >
             <Photo src={preview} />
           </div>
           <div className="photo-actions">
             <input ref={fileInput} type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ''; }} />
-            <Button size="sm" icon={<ImagePlus size={15} />} onClick={() => fileInput.current?.click()}>{preview ? 'Replace photo' : 'Add photo'}</Button>
-            {preview && <Button size="sm" variant="ghost" icon={<Trash2 size={15} />} onClick={() => { setFile(null); setRemovePhoto(true); }}>Remove</Button>}
-            <span className="field-hint">JPG, PNG or WebP, up to 15 MB. A bright, top-down photo works best.</span>
+            <Button size="sm" type="button" icon={<ImagePlus size={15} />} onClick={() => fileInput.current?.click()}>{preview ? 'Replace photo' : 'Add photo'}</Button>
+            {preview && <Button size="sm" variant="ghost" type="button" icon={<Trash2 size={15} />} onClick={() => { setFile(null); setLocalPreview(null); setRemovePhoto(true); }}>Remove</Button>}
+            <span className="field-hint">JPG, PNG or WebP, up to 25 MB. Auto-compressed in browser to &lt; 200 KB WebP.</span>
           </div>
         </div>
 

@@ -9,6 +9,7 @@ import { Button, Chip, ConfirmDialog, CustomSelect, Dialog, DialogHeader, EmptyS
 import { PageHeader } from './Shell';
 import { useMenu } from './menuStore';
 import { DishEditor, toInput } from './DishEditor';
+import { ModelViewer } from '../../components/ModelViewer';
 
 type Filter = 'all' | 'with3d' | 'without3d' | 'hidden' | 'soldout';
 
@@ -286,8 +287,29 @@ export function MenuLibrary() {
                 const dishTags = parseTags(d.tags);
                 return (
                   <article key={d.id} className={`dish ${d.published ? '' : 'is-hidden'}`}>
-                    <div className="dish-img">
-                      <Photo src={assetUrl(d.thumbnailUrl || d.imageUrl)} alt={d.name} />
+                    <div
+                      className="dish-img"
+                      onMouseEnter={(e) => {
+                        const mv = e.currentTarget.querySelector('model-viewer') as HTMLElement & { dismissPoster?: () => void };
+                        mv?.dismissPoster?.();
+                      }}
+                    >
+                      {d.modelUrl ? (
+                        <ModelViewer
+                          src={assetUrl(d.modelUrl)!}
+                          alt={d.name}
+                          poster={assetUrl(d.thumbnailUrl || d.imageUrl)}
+                          loading="lazy"
+                          reveal="interaction"
+                          scale={d.modelScale ?? 1.0}
+                          placement="none"
+                          autoRotate={false}
+                          showControls={false}
+                          className="dish-model-preview"
+                        />
+                      ) : (
+                        <Photo src={assetUrl(d.thumbnailUrl || d.imageUrl)} alt={d.name} />
+                      )}
                       <div className="dish-badges">
                         {d.modelStatus === 'PROCESSING' ? (
                           <Chip tone="saffron" icon={<Box size={12} />}>3D Processing</Chip>

@@ -21,6 +21,8 @@ type Props = {
   exposure?: number | string;
   environmentImage?: string;
   showControls?: boolean;
+  loading?: 'auto' | 'lazy' | 'eager';
+  reveal?: 'auto' | 'interaction' | 'manual';
   onLoad?: () => void;
   onError?: () => void;
   onArSupport?: (supported: boolean) => void;
@@ -56,6 +58,8 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
     exposure = '1.05',
     environmentImage = 'neutral',
     showControls = true,
+    loading,
+    reveal,
     onLoad,
     onError,
     onArSupport,
@@ -154,6 +158,8 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
   };
 
   if (poster) attrs.poster = poster;
+  if (loading) attrs.loading = loading;
+  if (reveal) attrs.reveal = reveal;
   if (isRotating) attrs['auto-rotate'] = '';
   if (ar) {
     attrs.ar = '';
@@ -182,7 +188,7 @@ export const ModelViewer = forwardRef<ModelViewerHandle, Props>(function ModelVi
 
       {ready && createElement('model-viewer', attrs)}
 
-      {!loaded && !failed && (
+      {!loaded && !failed && reveal !== 'interaction' && (
         <div className="mv-status" role="status">
           <Loader2 className="spin" size={18} />
           <span>Plating 3D dish…</span>
