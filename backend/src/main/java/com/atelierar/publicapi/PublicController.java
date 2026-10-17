@@ -12,7 +12,9 @@ import com.atelierar.web.Dtos.*;
 import com.atelierar.web.Mappers;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -34,39 +36,28 @@ public class PublicController {
     private final MenuEventRepository events;
     private final LeadInquiryRepository leads;
     private final RateLimiter limiter;
+    private final PublicMenuService publicMenuService;
 
     public PublicController(RestaurantRepository restaurants,
                             MenuItemRepository items,
                             MenuEventRepository events,
                             LeadInquiryRepository leads,
-                            RateLimiter limiter) {
+                            RateLimiter limiter,
+                            PublicMenuService publicMenuService) {
         this.restaurants = restaurants;
         this.items = items;
         this.events = events;
         this.leads = leads;
         this.limiter = limiter;
+        this.publicMenuService = publicMenuService;
     }
 
     @GetMapping("/menu/{slug}")
-    public PublicMenuDto menu(@PathVariable String slug) {
-        if ("demo".equalsIgnoreCase(slug)) {
-            var existing = restaurants.findBySlugAndPublishedTrue("demo");
-            if (existing.isPresent()) {
-                Restaurant r = existing.get();
-                return new PublicMenuDto(
-                        Mappers.publicRestaurant(r),
-                        items.findByRestaurantIdAndPublishedTrueOrderByCategoryAscNameAsc(r.getId()).stream()
-                                .map(Mappers::publicItem).toList());
-            }
-            // Seeded in-memory demo restaurant for instant preview
-            return buildSeededDemoMenu();
-        }
-
-        Restaurant r = published(slug);
-        return new PublicMenuDto(
-                Mappers.publicRestaurant(r),
-                items.findByRestaurantIdAndPublishedTrueOrderByCategoryAscNameAsc(r.getId()).stream()
-                        .map(Mappers::publicItem).toList());
+    public ResponseEntity<PublicMenuDto> menu(@PathVariable String slug) {
+        PublicMenuDto menu = publicMenuService.getPublicMenu(slug);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "public, max-age=30, s-maxage=60, stale-while-revalidate=120")
+                .body(menu);
     }
 
     /** Records an anonymous interaction (scan, dish view, AR launch) for the owner's analytics. */
@@ -109,41 +100,6 @@ public class PublicController {
     private Restaurant published(String slug) {
         return restaurants.findBySlugAndPublishedTrue(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "This menu is not available."));
-    }
-
-    private PublicMenuDto buildSeededDemoMenu() {
-        PublicRestaurantDto rest = new PublicRestaurantDto(
-                "Le Petit Bistro 3D",
-                "demo",
-                "Experience our signature culinary creations in interactive 3D and table-top Augmented Reality.",
-                "London & Dubai",
-                "USD",
-                "cobalt",
-                "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80",
-                "@lepetitbistro3d",
-                "+1234567890",
-                "+1 (555) 234-5678",
-                "@lepetitbistro3d",
-                "https://facebook.com",
-                "https://lepetitbistro.com",
-                "https://maps.google.com",
-                "Bistro_Guest_WiFi",
-                "bistrogourmet",
-                "dark",
-                true,
-                "Hello, I would like to order {dish} for Table {table}.",
-                List.of("Appetizers", "Main Courses", "Desserts", "Beverages")
-        );
-
-        UUID demoId = UUID.randomUUID();
-        var sampleDishes = SampleMenu.build(demoId);
-        // Set sample model for the first dish
-        if (!sampleDishes.isEmpty()) {
-            sampleDishes.get(0).setModel("/models/avocado.glb", "avocado.glb");
-        }
-
-        List<PublicItemDto> publicItems = sampleDishes.stream().map(Mappers::publicItem).toList();
-        return new PublicMenuDto(rest, publicItems);
     }
 
     @GetMapping("/health")

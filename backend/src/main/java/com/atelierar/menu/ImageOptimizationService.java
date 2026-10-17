@@ -36,6 +36,18 @@ public class ImageOptimizationService {
         String ext = info != null ? info.extension() : "jpg";
         String mime = info != null ? info.mimeType() : "image/jpeg";
 
+        if (inputBytes == null || inputBytes.length == 0) {
+            return new ImageResult(inputBytes, ext, mime, inputBytes, ext, mime);
+        }
+
+        // Fast-path: If client already downsampled and compressed the photo (< 300 KB WebP or JPEG),
+        // bypass heavy Java ImageIO CPU decoding and memory allocation completely for instant uploads
+        if (inputBytes.length <= 300 * 1024 && ("webp".equalsIgnoreCase(ext) || "jpg".equalsIgnoreCase(ext) || "jpeg".equalsIgnoreCase(ext))) {
+            log.debug("Image already pre-compressed by client ({} KB, {}); bypassing server ImageIO pass.",
+                    inputBytes.length / 1024, ext);
+            return new ImageResult(inputBytes, ext, mime, inputBytes, ext, mime);
+        }
+
         try {
             BufferedImage original = ImageIO.read(new ByteArrayInputStream(inputBytes));
             if (original == null) {

@@ -138,6 +138,7 @@ public class Restaurant {
         }
     }
 
+    public void setId(UUID id) { this.id = id; }
     public void setSlug(String slug) { this.slug = slug; }
     public void setPublished(boolean published) { this.published = published; }
     public void setCoverUrl(String coverUrl) { this.coverUrl = coverUrl; }

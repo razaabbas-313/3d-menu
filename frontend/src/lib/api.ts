@@ -307,6 +307,7 @@ const json = (method: string, body?: unknown): RequestInit => ({
 });
 
 import { mockStore } from './mockStore';
+import { compressImage } from './imageCompress';
 
 const isMock = () => !import.meta.env.PROD && token === 'mock-token-session';
 
@@ -408,7 +409,8 @@ export const api = {
   },
   uploadCover: async (file: File, onProgress?: (f: number) => void) => {
     try {
-      return await upload<Restaurant>('/restaurant/cover', file, onProgress);
+      const compressed = await compressImage(file, 1600, 0.82);
+      return await upload<Restaurant>('/restaurant/cover', compressed, onProgress);
     } catch (err) {
       if (!isMock()) throw err;
       onProgress?.(1);
@@ -483,7 +485,8 @@ export const api = {
   },
   uploadImage: async (id: string, file: File, onProgress?: (f: number) => void) => {
     try {
-      return await upload<Item>(`/items/${id}/image`, file, onProgress);
+      const compressed = await compressImage(file, 1200, 0.82);
+      return await upload<Item>(`/items/${id}/image`, compressed, onProgress);
     } catch (err) {
       if (!isMock()) throw err;
       onProgress?.(1);
@@ -577,35 +580,7 @@ export const api = {
 
   // public (no auth header)
   publicMenu: async (slug: string): Promise<PublicMenu> => {
-    const assetBase = (import.meta.env.VITE_ASSET_BASE_URL || import.meta.env.VITE_S3_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-    const snapshotUrl = assetBase
-      ? `${assetBase}/public/${encodeURIComponent(slug)}/menu.json`
-      : `${BASE}/uploads/public/${encodeURIComponent(slug)}/menu.json`;
-
-    // 1. Try static S3 / CDN snapshot first (zero wait for sleeping free-tier servers)
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2500);
-      const res = await fetch(snapshotUrl, {
-        signal: controller.signal,
-        headers: { Accept: 'application/json' },
-        cache: 'default'
-      });
-      clearTimeout(timeout);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.restaurant && Array.isArray(data.items)) {
-          try {
-            localStorage.setItem(`atelier.snapshot.${slug}`, JSON.stringify(data));
-          } catch {}
-          return data as PublicMenu;
-        }
-      }
-    } catch {
-      // Snapshot fetch failed or timed out, fallback to live API
-    }
-
-    // 2. Fall back to live API endpoint
+    // 1. Fetch directly from dynamic cached backend endpoint (Spring @Cacheable + HTTP edge headers)
     try {
       const data = await request<PublicMenu>(`/public/menu/${encodeURIComponent(slug)}`, {}, { publicCall: true });
       try {
@@ -613,12 +588,12 @@ export const api = {
       } catch {}
       return data;
     } catch (e) {
-      // 3. Fall back to cached local snapshot
+      // 2. Fall back to cached local snapshot on connection failure
       try {
         const cached = localStorage.getItem(`atelier.snapshot.${slug}`);
         if (cached) return JSON.parse(cached) as PublicMenu;
       } catch {}
-      // 4. In development only, fall back to mock store for 'demo'
+      // 3. In development only, fall back to mock store for 'demo'
       if (!import.meta.env.PROD && slug === 'demo') {
         return mockStore.getPublicMenu(slug);
       }

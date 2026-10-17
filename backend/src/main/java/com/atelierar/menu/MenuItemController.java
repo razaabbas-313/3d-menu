@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /** Owner-facing CRUD. Every query is scoped to the signed-in owner's restaurant. */
 @RestController
@@ -123,8 +124,43 @@ public class MenuItemController {
         byte[] rawBytes = file.getBytes();
         ImageOptimizationService.ImageResult imgResult = imageOptimizer.optimize(rawBytes, info);
 
-        String mainUrl = storage.saveItemImageBytes(item.getRestaurantId(), item.getId(), imgResult.mainBytes(), imgResult.mainExtension(), imgResult.mainMimeType());
-        String thumbUrl = storage.saveItemThumbnail(item.getRestaurantId(), item.getId(), imgResult.thumbnailBytes(), imgResult.thumbExtension(), imgResult.thumbMimeType());
+        // Upload main image and thumbnail concurrently to eliminate sequential network latency
+        CompletableFuture<String> mainFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return storage.saveItemImageBytes(item.getRestaurantId(), item.getId(), imgResult.mainBytes(), imgResult.mainExtension(), imgResult.mainMimeType());
+            } catch (IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        });
+
+        CompletableFuture<String> thumbFuture;
+        if (imgResult.mainBytes() == imgResult.thumbnailBytes()) {
+            thumbFuture = mainFuture;
+        } else {
+            thumbFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    return storage.saveItemThumbnail(item.getRestaurantId(), item.getId(), imgResult.thumbnailBytes(), imgResult.thumbExtension(), imgResult.thumbMimeType());
+                } catch (IOException e) {
+                    throw new java.io.UncheckedIOException(e);
+                }
+            });
+        }
+
+        String mainUrl;
+        String thumbUrl;
+        try {
+            CompletableFuture.allOf(mainFuture, thumbFuture).join();
+            mainUrl = mainFuture.join();
+            thumbUrl = thumbFuture.join();
+        } catch (java.util.concurrent.CompletionException ce) {
+            if (ce.getCause() instanceof java.io.UncheckedIOException uio) {
+                throw uio.getCause();
+            }
+            if (ce.getCause() instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new IOException("Failed to save image assets", ce.getCause());
+        }
 
         String oldImage = item.getImageUrl();
         String oldThumb = item.getThumbnailUrl();
@@ -134,7 +170,7 @@ public class MenuItemController {
         MenuItem saved = items.save(item);
 
         if (oldImage != null && !oldImage.equals(mainUrl)) storage.deleteQuietly(oldImage);
-        if (oldThumb != null && !oldThumb.equals(thumbUrl)) storage.deleteQuietly(oldThumb);
+        if (oldThumb != null && !oldThumb.equals(thumbUrl) && !oldThumb.equals(oldImage)) storage.deleteQuietly(oldThumb);
 
         snapshots.updateSnapshot(saved.getRestaurantId());
         return Mappers.item(saved);

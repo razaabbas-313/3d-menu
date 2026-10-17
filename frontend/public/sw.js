@@ -72,8 +72,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Handle public menu snapshots: Stale-While-Revalidate
-  if (url.pathname.includes('/public/') && url.pathname.endsWith('/menu.json')) {
+  // 2. Handle public menu endpoint: Stale-While-Revalidate
+  if (url.pathname.includes('/api/v1/public/menu/') || (url.pathname.includes('/public/') && url.pathname.endsWith('/menu.json'))) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
         const cachedResponse = await cache.match(request);

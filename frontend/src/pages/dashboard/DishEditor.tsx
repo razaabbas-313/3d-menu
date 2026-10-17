@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Download, Globe, ImagePlus, Sparkles, Trash2, X } from 'lucide-react';
 import { api, assetUrl, Item, ItemInput } from '../../lib/api';
+import { compressImage } from '../../lib/imageCompress';
 import { DEFAULT_CATEGORIES, parseTags } from '../../lib/format';
 import { navigate } from '../../lib/router';
 import { errorMessage, useToast } from '../../lib/toast';
@@ -75,12 +76,17 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
 
   const toggleTag = (t: string) => setTags((cur) => (cur.some((x) => x.toLowerCase() === t.toLowerCase()) ? cur.filter((x) => x.toLowerCase() !== t.toLowerCase()) : cur.length >= 8 ? cur : [...cur, t]));
 
-  function pickFile(f: File | undefined) {
+  async function pickFile(f: File | undefined) {
     if (!f) return;
     if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return setError('Choose a JPG, PNG or WebP photo.');
-    if (f.size > 6 * 1024 * 1024) return setError('That photo is larger than 6 MB. Choose a smaller one.');
+    if (f.size > 15 * 1024 * 1024) return setError('That photo is larger than 15 MB. Choose a smaller one.');
     setError('');
-    setFile(f);
+    try {
+      const compressed = await compressImage(f, 1200, 0.82);
+      setFile(compressed);
+    } catch {
+      setFile(f);
+    }
     setRemovePhoto(false);
   }
 
@@ -213,7 +219,7 @@ function EditorForm({ item, categories, onClose, onSaved }: Omit<Props, 'open'>)
             <input ref={fileInput} type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ''; }} />
             <Button size="sm" icon={<ImagePlus size={15} />} onClick={() => fileInput.current?.click()}>{preview ? 'Replace photo' : 'Add photo'}</Button>
             {preview && <Button size="sm" variant="ghost" icon={<Trash2 size={15} />} onClick={() => { setFile(null); setRemovePhoto(true); }}>Remove</Button>}
-            <span className="field-hint">JPG, PNG or WebP, up to 6 MB. A bright, top-down photo works best.</span>
+            <span className="field-hint">JPG, PNG or WebP, up to 15 MB. A bright, top-down photo works best.</span>
           </div>
         </div>
 
